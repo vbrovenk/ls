@@ -19,16 +19,32 @@
 # include <dirent.h>
 # include <errno.h>
 
+/*
+** struct for save 
+*/
+typedef struct s_file
+{
+	struct dirent *entry;
+	
+	struct s_file *next;
+
+}				t_file;
 
 /*
-** end_flags - if flags end before files
+** args_files - if files pass in args of ls
 */
 typedef struct s_ls
 {
 	u_int8_t	flag_R;
 
-	u_int8_t	end_flags;
+	u_int8_t	args_files;
+
+	t_file		*list_files;
+	t_file		*last_file;
 
 }				t_ls;
+
+
+
 
 # endif
