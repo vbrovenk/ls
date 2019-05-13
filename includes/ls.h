@@ -30,6 +30,14 @@ typedef struct s_file
 
 }				t_file;
 
+typedef	struct s_args
+{
+	char *name;
+	struct s_args *next;
+
+}				t_args;
+
+
 /*
 ** args_files - if files pass in args of ls
 */
@@ -41,6 +49,9 @@ typedef struct s_ls
 
 	t_file		*list_files;
 	t_file		*last_file;
+
+	t_args		*dirs;
+	t_args		*non_dirs;
 
 }				t_ls;
 

@@ -38,10 +38,25 @@ void	check_flags(char *flags, t_ls *ls)
 	}
 }
 
+t_file	*free_list_files(t_file *list_files)
+{
+	t_file *before;
+
+	while (list_files != NULL)
+	{
+		free(list_files->entry);
+		before = list_files;
+		list_files = list_files->next;
+		free(before);	
+	}
+	return (NULL);
+}
+
 void	print_struct_ls(t_ls *ls)
 {
 	ft_printf("=========== LS ===========\n");
 	ft_printf("ls->flag_R = %d\n", ls->flag_R);
+	ft_printf("ls->args_files = %d\n", ls->args_files);
 }
 
 void	show_files(t_ls *ls)
@@ -77,10 +92,9 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry)
 		ls->last_file->next = new;
 		ls->last_file = ls->last_file->next;
 	}
-
 }
 
-void	sort_files(t_ls *ls)
+void	regular_sort_files(t_ls *ls)
 {
 	t_file *current_file;
 	t_file *after_file;
@@ -105,24 +119,146 @@ void	sort_files(t_ls *ls)
 	}
 }
 
+void	front_back_split(t_file *source, t_file **left, t_file **right)
+{
+	t_file *end;
+	t_file *middle;
+
+	middle = source;
+	end = source->next;
+	while (end != NULL)
+	{
+		end = end->next;
+		if (end != NULL)
+		{
+			middle = middle->next;
+			end = end->next;
+		}
+	}
+	*left = source;
+	*right = middle->next;
+	middle->next = NULL;
+}
+
+t_file	*merge_sorted_list(t_file *left, t_file *right)
+{
+	t_file *result;
+
+	result = NULL;
+	if (left == NULL)
+		return (right);
+	else if (right == NULL)
+		return (left);
+	if (ft_strcmp(left->entry->d_name, right->entry->d_name) > 0)
+	{
+		result = right;
+		result->next = merge_sorted_list(left, right->next);
+	}
+	else
+	{
+		result = left;
+		result->next = merge_sorted_list(left->next, right);
+	}
+	return (result);
+}
+
+void	merge_sort(t_file **list_files)
+{
+	t_file *head;
+	t_file *left;
+	t_file *right;
+
+	head = *list_files;
+	if (head == NULL || head->next == NULL)
+		return ;
+	front_back_split(head, &left, &right);
+	// recursive sort sublists
+	merge_sort(&left);
+	merge_sort(&right);
+
+	*list_files = merge_sorted_list(left, right);
+}
+
+
 void	open_directory(t_ls *ls, char *directory)
 {
 	DIR *dir;
 	struct dirent *entry;
 
 	if ((dir = opendir(directory)) == NULL)
-		perror("open_directory()");
+	{
+		ft_printf("ft_ls: %s: %s\n", directory, strerror(errno));
+		return ;
+	}
 
 	while ((entry = readdir(dir)) != NULL)
 	{
 		add_file_to_list(ls, entry);
-		// show_files(ls);
 	}
 
-	sort_files(ls);
-	// ft_printf("NORm\n");
+	// regular_sort_files(ls);
+	merge_sort(&ls->list_files);
 
+	closedir(dir);
 	show_files(ls);
+	ls->list_files = free_list_files(ls->list_files);
+}
+
+
+void	print_args(t_ls *ls, int argc, char *argv[])
+{
+	int i;
+
+	i = ls->args_files;
+	while (i < argc)
+	{
+		ft_printf("%s ", argv[i]);
+		i++;
+	}
+	ft_printf("\n");
+}
+
+void	add_to_list(t_args **head, char *name)
+{
+	t_args *current;
+	t_args *new;
+
+	current = *head;
+	new = (t_args *)ft_memalloc(sizeof(t_args));
+	new->name = ft_strdup(name);
+	if (current == NULL)
+	{
+		*head = new;
+	}
+	else
+	{
+		while (current->next != NULL)
+			current = current->next;
+		current->next = new;
+	}
+}
+
+void	sort_args(t_ls *ls, int argc, char *argv[])
+{
+	int i;
+	DIR *dir;
+
+	i = ls->args_files;
+	while (i < argc)
+	{
+		if ((dir = opendir(argv[i])) == NULL)
+		{
+			if (errno == ENOENT)
+				ft_printf("ft_ls: %s: %s\n", argv[i], strerror(errno));
+			else if (errno == ENOTDIR)
+				add_to_list(&ls->non_dirs, argv[i]);
+		}
+		else
+		{
+			add_to_list(&ls->dirs, argv[i]);
+		}
+		i++;
+	}
 }
 
 int	main(int argc, char *argv[])
@@ -139,24 +275,41 @@ int	main(int argc, char *argv[])
 	{
 		if (argv[i][0] == '-' && ls->args_files == 0)
 			check_flags(argv[i], ls);
-		else
+		else if (ls->args_files == 0)
 			ls->args_files = i;
 		i++;
 	}
 	if (ls->args_files != 0)
 	{
+		sort_args(ls, argc, argv);
 		i = ls->args_files;
-		while (i < argc)
+		t_args *current = ls->non_dirs;
+		while (current)
 		{
-			open_directory(ls, argv[i]);
-			i++;
+			ft_printf("%s\n", current->name);
+			current = current->next;
 		}
+		current = ls->dirs;
+		while (current != NULL)
+		{
+			open_directory(ls, current->name);
+			current = current->next;
+
+		}
+		// while (i < argc)
+		// {
+		// 	open_directory(ls, argv[i]);
+		// 	i++;
+		// }
+
 	}
 	else
 	{
 		open_directory(ls, ".");
 	}
-		
+	
 	// print_struct_ls(ls);
+
+	// system("leaks ft_ls");
 	return (0);
 }
