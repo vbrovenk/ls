@@ -71,13 +71,16 @@ void	show_files(char *directory, t_ls *ls)
 	current = ls->list_files;
 	// if (current == NULL)
 	// 	return ;
-	ft_printf("========= LIST OF < %s > =========\n", directory);	
+
+	if (ls->single_arg > 1)
+		ft_printf("%s:\n", directory);
+
 	while (current != NULL)
 	{
 		ft_printf("%s\n", current->name);
 		current = current->next;
 	}
-	ft_printf("\n");
+	// ft_printf("\n");
 }
 
 void	add_file_to_list(t_ls *ls, struct dirent *entry)
@@ -223,6 +226,7 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 	DIR *dir;
 
 	i = ls->args_files;
+	ls->single_arg = argc - ls->args_files;
 	while (i < argc)
 	{
 		if ((dir = opendir(argv[i])) == NULL)
@@ -272,6 +276,8 @@ int	main(int argc, char *argv[])
 			current = current->next;
 		}
 		current = ls->dirs;
+		// if (current != NULL)
+		// 	ft_printf("\n");
 		while (current != NULL)
 		{
 			open_directory(ls, current->name);
@@ -283,8 +289,8 @@ int	main(int argc, char *argv[])
 		open_directory(ls, ".");
 	}
 	
-	print_struct_ls(ls);
+	// print_struct_ls(ls);
 
-	system("leaks ft_ls");
+	// system("leaks ft_ls");
 	return (0);
 }

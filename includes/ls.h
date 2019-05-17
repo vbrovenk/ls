@@ -37,6 +37,7 @@ typedef struct s_file
 
 /*
 ** args_files - if files pass in args of ls
+** single_arg - if only one arg-file, don't need show name of this dir
 */
 typedef struct s_ls
 {
@@ -45,6 +46,7 @@ typedef struct s_ls
 	u_int8_t	flag_r;
 
 	u_int8_t	args_files;
+	u_int8_t	single_arg;
 
 	t_file		*list_files;
 	t_file		*last_file;
