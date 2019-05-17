@@ -28,10 +28,12 @@ void	check_flags(char *flags, t_ls *ls)
 	{
 		if (flags[i] == 'R')
 			ls->flag_R = 1;
+		else if (flags[i] == 'a')
+			ls->flag_a = 1;
 		else
 		{
 			ft_printf("ft_ls: illegal option -- %c\n", flags[i]);
-			ft_printf("usage: ./ft_ls [-R] [file ...]\n");
+			ft_printf("usage: ./ft_ls [-Ra] [file ...]\n");
 			exit(1);
 		}
 		i++;
@@ -56,6 +58,7 @@ void	print_struct_ls(t_ls *ls)
 {
 	ft_printf("=========== LS ===========\n");
 	ft_printf("ls->flag_R = %d\n", ls->flag_R);
+	ft_printf("ls->flag_a = %d\n", ls->flag_a);
 	ft_printf("ls->args_files = %d\n", ls->args_files);
 }
 
@@ -63,13 +66,16 @@ void	show_files(char *directory, t_ls *ls)
 {
 	t_file *current;
 
-	ft_printf("========= LIST OF < %s > =========\n", directory);
 	current = ls->list_files;
+	// if (current == NULL)
+	// 	return ;
+	ft_printf("========= LIST OF < %s > =========\n", directory);	
 	while (current != NULL)
 	{
-		ft_printf("current->d_name = %s\n", current->name);
+		ft_printf("%s\n", current->name);
 		current = current->next;
 	}
+	ft_printf("\n");
 }
 
 void	add_file_to_list(t_ls *ls, struct dirent *entry)
@@ -80,8 +86,6 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry)
 	if ((new = (t_file *)ft_memalloc(sizeof(t_file))) == NULL)
 		ft_error("Can't allocate t_file");
 	new->name = ft_strdup(entry->d_name);
-	// new->entry = (struct dirent *)malloc(sizeof(struct dirent));
-	// ft_memcpy(new->entry, entry, sizeof(struct dirent));
 	current = ls->list_files;
 	if (ls->list_files == NULL)
 	{
@@ -229,34 +233,50 @@ char	*join_path(char *part_path, char *current_dir)
 	return (full_path);
 }
 
-void	open_directory(t_ls *ls, char *directory)
+t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 {
-	DIR *dir;
-	struct dirent *entry;
-	t_file *dirs;
-	t_file *current_dir;
-	char *full_path;
+	merge_sort(&ls->list_files);
+	merge_sort(dirs);
+	closedir(dir);
+	show_files(dir_name, ls);
+	ls->list_files = free_list_files(ls->list_files);
+	return (*dirs);
+}
 
-	dir = opendir(directory);
+void	adding_file(t_ls *ls, struct dirent *entry, t_file **dirs)
+{
+	if (entry->d_type == DT_DIR && ft_strequ(entry->d_name, ".") == 0
+								&& ft_strequ(entry->d_name, "..") == 0)
+	{
+		if (ls->flag_a == 1)
+			add_to_list(dirs, entry->d_name);
+		else if (entry->d_name[0] != '.')
+			add_to_list(dirs, entry->d_name);				
+	}
+	if (ls->flag_a == 1)
+		add_file_to_list(ls, entry);
+	else if (entry->d_name[0] != '.')
+		add_file_to_list(ls, entry);
+}
+
+void	open_directory(t_ls *ls, char *dir_name)
+{
+	DIR				*dir;
+	struct dirent	*entry;
+	t_file			*dirs;
+	t_file			*current_dir;
+	char			*full_path;
+
+	dir = opendir(dir_name);
 	dirs = NULL;
 	while ((entry = readdir(dir)) != NULL)
-	{
-		if (entry->d_type == DT_DIR && ft_strequ(entry->d_name, ".") == 0
-									&& ft_strequ(entry->d_name, "..") == 0)
-			add_to_list(&dirs, entry->d_name);
-		add_file_to_list(ls, entry);
-	}
-	merge_sort(&ls->list_files);
-	merge_sort(&ls->dirs);
-	closedir(dir);
-	show_files(directory, ls);
-	ls->list_files = free_list_files(ls->list_files);
-	current_dir = dirs;
+		adding_file(ls, entry, &dirs);
+	current_dir = sort_and_show(ls, dir, dir_name, &dirs);
 	if (ls->flag_R == 1)
 	{
 		while (current_dir != NULL)
 		{
-			full_path = join_path(directory, current_dir->name);
+			full_path = join_path(dir_name, current_dir->name);
 			open_directory(ls, full_path);
 			current_dir = current_dir->next;
 			ft_strdel(&full_path);
@@ -333,21 +353,19 @@ int	main(int argc, char *argv[])
 			ft_printf("%s\n", current->name);
 			current = current->next;
 		}
-		// free_list_files(ls->non_dirs);
 		current = ls->dirs;
 		while (current != NULL)
 		{
 			open_directory(ls, current->name);
 			current = current->next;
 		}
-		// free_list_files(ls->dirs);
 	}
 	else
 	{
 		open_directory(ls, ".");
 	}
 	
-	// print_struct_ls(ls);
+	print_struct_ls(ls);
 
 	system("leaks ft_ls");
 	return (0);

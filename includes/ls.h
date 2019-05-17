@@ -41,6 +41,7 @@ typedef struct s_file
 typedef struct s_ls
 {
 	u_int8_t	flag_R;
+	u_int8_t	flag_a;
 
 	u_int8_t	args_files;
 
