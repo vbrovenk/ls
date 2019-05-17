@@ -18,7 +18,8 @@ INCLUDE = includes/ls.h
 LIBFT_INC = ./libft/includes/
 LIBFT = ./libft/libft.a
 
-SRC = main.c
+SRC =	main.c \
+		sorting.c
 
 OBJ = $(addprefix obj/, $(SRC:.c=.o))
 

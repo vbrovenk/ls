@@ -30,10 +30,12 @@ void	check_flags(char *flags, t_ls *ls)
 			ls->flag_R = 1;
 		else if (flags[i] == 'a')
 			ls->flag_a = 1;
+		else if (flags[i] == 'r')
+			ls->flag_r = 1;
 		else
 		{
 			ft_printf("ft_ls: illegal option -- %c\n", flags[i]);
-			ft_printf("usage: ./ft_ls [-Ra] [file ...]\n");
+			ft_printf("usage: ./ft_ls [-Rar] [file ...]\n");
 			exit(1);
 		}
 		i++;
@@ -123,66 +125,6 @@ void	regular_sort_files(t_ls *ls)
 	}
 }
 
-void	front_back_split(t_file *source, t_file **left, t_file **right)
-{
-	t_file *end;
-	t_file *middle;
-
-	middle = source;
-	end = source->next;
-	while (end != NULL)
-	{
-		end = end->next;
-		if (end != NULL)
-		{
-			middle = middle->next;
-			end = end->next;
-		}
-	}
-	*left = source;
-	*right = middle->next;
-	middle->next = NULL;
-}
-
-t_file	*merge_sorted_list(t_file *left, t_file *right)
-{
-	t_file *result;
-
-	result = NULL;
-	if (left == NULL)
-		return (right);
-	else if (right == NULL)
-		return (left);
-	if (ft_strcmp(left->name, right->name) > 0)
-	{
-		result = right;
-		result->next = merge_sorted_list(left, right->next);
-	}
-	else
-	{
-		result = left;
-		result->next = merge_sorted_list(left->next, right);
-	}
-	return (result);
-}
-
-void	merge_sort(t_file **list_files)
-{
-	t_file *head;
-	t_file *left;
-	t_file *right;
-
-	head = *list_files;
-	if (head == NULL || head->next == NULL)
-		return ;
-	front_back_split(head, &left, &right);
-	// recursive sort sublists
-	merge_sort(&left);
-	merge_sort(&right);
-
-	*list_files = merge_sorted_list(left, right);
-}
-
 void	add_to_list(t_file **head, char *name)
 {
 	t_file *current;
@@ -201,26 +143,6 @@ void	add_to_list(t_file **head, char *name)
 	}
 }
 
-// void	open_directory(t_ls *ls, char *directory)
-// {
-// 	DIR *dir;
-// 	struct dirent *entry;
-
-// 	dir = opendir(directory);
-
-// 	while ((entry = readdir(dir)) != NULL)
-// 	{
-// 		add_file_to_list(ls, entry);
-// 	}
-
-// 	// regular_sort_files(ls);
-// 	merge_sort(&ls->list_files);
-
-// 	closedir(dir);
-// 	show_files(directory, ls);
-// 	ls->list_files = free_list_files(ls->list_files);
-// }
-
 char	*join_path(char *part_path, char *current_dir)
 {
 	char *temp;
@@ -235,8 +157,8 @@ char	*join_path(char *part_path, char *current_dir)
 
 t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 {
-	merge_sort(&ls->list_files);
-	merge_sort(dirs);
+	merge_sort(ls, &ls->list_files);
+	merge_sort(ls, dirs);
 	closedir(dir);
 	show_files(dir_name, ls);
 	ls->list_files = free_list_files(ls->list_files);
@@ -248,14 +170,10 @@ void	adding_file(t_ls *ls, struct dirent *entry, t_file **dirs)
 	if (entry->d_type == DT_DIR && ft_strequ(entry->d_name, ".") == 0
 								&& ft_strequ(entry->d_name, "..") == 0)
 	{
-		if (ls->flag_a == 1)
+		if (ls->flag_a == 1 || entry->d_name[0] != '.')
 			add_to_list(dirs, entry->d_name);
-		else if (entry->d_name[0] != '.')
-			add_to_list(dirs, entry->d_name);				
 	}
-	if (ls->flag_a == 1)
-		add_file_to_list(ls, entry);
-	else if (entry->d_name[0] != '.')
+	if (ls->flag_a == 1 || entry->d_name[0] != '.')
 		add_file_to_list(ls, entry);
 }
 
@@ -321,8 +239,8 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 		}
 		i++;
 	}
-	merge_sort(&ls->non_dirs);
-	merge_sort(&ls->dirs);
+	merge_sort(ls, &ls->non_dirs);
+	merge_sort(ls, &ls->dirs);
 }
 
 int	main(int argc, char *argv[])

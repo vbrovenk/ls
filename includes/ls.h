@@ -42,6 +42,7 @@ typedef struct s_ls
 {
 	u_int8_t	flag_R;
 	u_int8_t	flag_a;
+	u_int8_t	flag_r;
 
 	u_int8_t	args_files;
 
@@ -54,6 +55,9 @@ typedef struct s_ls
 }				t_ls;
 
 
-
+/*
+** sorting.c
+*/
+void	merge_sort(t_ls *ls, t_file **list_files);
 
 # endif
