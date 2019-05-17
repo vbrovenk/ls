@@ -26,16 +26,12 @@ typedef struct s_file
 {
 	struct dirent *entry;
 	
+	char	*arg_name;
+	
 	struct s_file *next;
 
 }				t_file;
 
-typedef	struct s_args
-{
-	char *name;
-	struct s_args *next;
-
-}				t_args;
 
 
 /*
@@ -50,8 +46,8 @@ typedef struct s_ls
 	t_file		*list_files;
 	t_file		*last_file;
 
-	t_args		*dirs;
-	t_args		*non_dirs;
+	t_file		*dirs;
+	t_file		*non_dirs;
 
 }				t_ls;
 

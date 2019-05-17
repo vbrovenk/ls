@@ -59,11 +59,11 @@ void	print_struct_ls(t_ls *ls)
 	ft_printf("ls->args_files = %d\n", ls->args_files);
 }
 
-void	show_files(t_ls *ls)
+void	show_files(char *directory, t_ls *ls)
 {
 	t_file *current;
 
-	ft_printf("========= LIST OF FILES ===========\n");
+	ft_printf("========= LIST OF < %s > =========\n", directory);
 	current = ls->list_files;
 	while (current != NULL)
 	{
@@ -185,11 +185,7 @@ void	open_directory(t_ls *ls, char *directory)
 	DIR *dir;
 	struct dirent *entry;
 
-	if ((dir = opendir(directory)) == NULL)
-	{
-		ft_printf("ft_ls: %s: %s\n", directory, strerror(errno));
-		return ;
-	}
+	dir = opendir(directory);
 
 	while ((entry = readdir(dir)) != NULL)
 	{
@@ -200,12 +196,12 @@ void	open_directory(t_ls *ls, char *directory)
 	merge_sort(&ls->list_files);
 
 	closedir(dir);
-	show_files(ls);
+	show_files(directory, ls);
 	ls->list_files = free_list_files(ls->list_files);
 }
 
 
-void	print_args(t_ls *ls, int argc, char *argv[])
+void	print_args(t_ls *ls, int argc, char *argv[]) // not use
 {
 	int i;
 
@@ -218,18 +214,16 @@ void	print_args(t_ls *ls, int argc, char *argv[])
 	ft_printf("\n");
 }
 
-void	add_to_list(t_args **head, char *name)
+void	add_to_list(t_file **head, char *name)
 {
-	t_args *current;
-	t_args *new;
+	t_file *current;
+	t_file *new;
 
 	current = *head;
-	new = (t_args *)ft_memalloc(sizeof(t_args));
-	new->name = ft_strdup(name);
+	new = (t_file *)ft_memalloc(sizeof(t_file));
+	new->arg_name = ft_strdup(name);
 	if (current == NULL)
-	{
 		*head = new;
-	}
 	else
 	{
 		while (current->next != NULL)
@@ -256,9 +250,12 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 		else
 		{
 			add_to_list(&ls->dirs, argv[i]);
+			closedir(dir);
 		}
 		i++;
 	}
+	// merge_sort(&ls->non_dirs);
+	// merge_sort(&ls->dirs);
 }
 
 int	main(int argc, char *argv[])
@@ -283,25 +280,19 @@ int	main(int argc, char *argv[])
 	{
 		sort_args(ls, argc, argv);
 		i = ls->args_files;
-		t_args *current = ls->non_dirs;
+		t_file *current = ls->non_dirs;
 		while (current)
 		{
-			ft_printf("%s\n", current->name);
+			ft_printf("%s\n", current->arg_name);
 			current = current->next;
 		}
 		current = ls->dirs;
 		while (current != NULL)
 		{
-			open_directory(ls, current->name);
+			open_directory(ls, current->arg_name);
 			current = current->next;
 
 		}
-		// while (i < argc)
-		// {
-		// 	open_directory(ls, argv[i]);
-		// 	i++;
-		// }
-
 	}
 	else
 	{
