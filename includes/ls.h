@@ -19,14 +19,15 @@
 # include <dirent.h>
 # include <errno.h>
 
+
 /*
 ** struct for save 
 */
 typedef struct s_file
 {
-	struct dirent *entry;
+	// struct dirent *entry;
 	
-	char	*arg_name;
+	char	*name;
 	
 	struct s_file *next;
 

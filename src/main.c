@@ -44,10 +44,10 @@ t_file	*free_list_files(t_file *list_files)
 
 	while (list_files != NULL)
 	{
-		free(list_files->entry);
+		free(list_files->name);
 		before = list_files;
 		list_files = list_files->next;
-		free(before);	
+		free(before);
 	}
 	return (NULL);
 }
@@ -67,7 +67,7 @@ void	show_files(char *directory, t_ls *ls)
 	current = ls->list_files;
 	while (current != NULL)
 	{
-		ft_printf("current->d_name = %s\n", current->entry->d_name);
+		ft_printf("current->d_name = %s\n", current->name);
 		current = current->next;
 	}
 }
@@ -79,8 +79,9 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry)
 
 	if ((new = (t_file *)ft_memalloc(sizeof(t_file))) == NULL)
 		ft_error("Can't allocate t_file");
-	new->entry = (struct dirent *)malloc(sizeof(struct dirent));
-	ft_memcpy(new->entry, entry, sizeof(struct dirent));
+	new->name = ft_strdup(entry->d_name);
+	// new->entry = (struct dirent *)malloc(sizeof(struct dirent));
+	// ft_memcpy(new->entry, entry, sizeof(struct dirent));
 	current = ls->list_files;
 	if (ls->list_files == NULL)
 	{
@@ -98,7 +99,7 @@ void	regular_sort_files(t_ls *ls)
 {
 	t_file *current_file;
 	t_file *after_file;
-	struct dirent *temp;
+	char	*temp;
 
 	current_file = ls->list_files;
 	while (current_file->next != NULL)
@@ -106,12 +107,11 @@ void	regular_sort_files(t_ls *ls)
 		after_file = current_file->next;
 		while (after_file != NULL)
 		{
-			if (ft_strcmp(current_file->entry->d_name,
-							after_file->entry->d_name) > 0)
+			if (ft_strcmp(current_file->name, after_file->name) > 0)
 			{
-				temp = current_file->entry;
-				current_file->entry = after_file->entry;
-				after_file->entry = temp;
+				temp = current_file->name;
+				current_file->name = after_file->name;
+				after_file->name = temp;
 			}
 			after_file = after_file->next;
 		}
@@ -149,7 +149,7 @@ t_file	*merge_sorted_list(t_file *left, t_file *right)
 		return (right);
 	else if (right == NULL)
 		return (left);
-	if (ft_strcmp(left->entry->d_name, right->entry->d_name) > 0)
+	if (ft_strcmp(left->name, right->name) > 0)
 	{
 		result = right;
 		result->next = merge_sorted_list(left, right->next);
@@ -179,25 +179,90 @@ void	merge_sort(t_file **list_files)
 	*list_files = merge_sorted_list(left, right);
 }
 
+void	add_to_list(t_file **head, char *name)
+{
+	t_file *current;
+	t_file *new;
+
+	current = *head;
+	new = (t_file *)ft_memalloc(sizeof(t_file));
+	new->name = ft_strdup(name);
+	if (current == NULL)
+		*head = new;
+	else
+	{
+		while (current->next != NULL)
+			current = current->next;
+		current->next = new;
+	}
+}
+
+// void	open_directory(t_ls *ls, char *directory)
+// {
+// 	DIR *dir;
+// 	struct dirent *entry;
+
+// 	dir = opendir(directory);
+
+// 	while ((entry = readdir(dir)) != NULL)
+// 	{
+// 		add_file_to_list(ls, entry);
+// 	}
+
+// 	// regular_sort_files(ls);
+// 	merge_sort(&ls->list_files);
+
+// 	closedir(dir);
+// 	show_files(directory, ls);
+// 	ls->list_files = free_list_files(ls->list_files);
+// }
+
+char	*join_path(char *part_path, char *current_dir)
+{
+	char *temp;
+	char *full_path;
+
+	full_path = ft_strjoin(part_path, "/");
+	temp = full_path;
+	full_path = ft_strjoin(full_path, current_dir);
+	ft_strdel(&temp);
+	return (full_path);
+}
 
 void	open_directory(t_ls *ls, char *directory)
 {
 	DIR *dir;
 	struct dirent *entry;
+	t_file *dirs;
+	t_file *current_dir;
+	char *full_path;
 
 	dir = opendir(directory);
-
+	dirs = NULL;
 	while ((entry = readdir(dir)) != NULL)
 	{
+		if (entry->d_type == DT_DIR && ft_strequ(entry->d_name, ".") == 0
+									&& ft_strequ(entry->d_name, "..") == 0)
+			add_to_list(&dirs, entry->d_name);
 		add_file_to_list(ls, entry);
 	}
-
-	// regular_sort_files(ls);
 	merge_sort(&ls->list_files);
-
+	merge_sort(&ls->dirs);
 	closedir(dir);
 	show_files(directory, ls);
 	ls->list_files = free_list_files(ls->list_files);
+	current_dir = dirs;
+	if (ls->flag_R == 1)
+	{
+		while (current_dir != NULL)
+		{
+			full_path = join_path(directory, current_dir->name);
+			open_directory(ls, full_path);
+			current_dir = current_dir->next;
+			ft_strdel(&full_path);
+		}
+	}
+	free_list_files(dirs);
 }
 
 
@@ -212,24 +277,6 @@ void	print_args(t_ls *ls, int argc, char *argv[]) // not use
 		i++;
 	}
 	ft_printf("\n");
-}
-
-void	add_to_list(t_file **head, char *name)
-{
-	t_file *current;
-	t_file *new;
-
-	current = *head;
-	new = (t_file *)ft_memalloc(sizeof(t_file));
-	new->arg_name = ft_strdup(name);
-	if (current == NULL)
-		*head = new;
-	else
-	{
-		while (current->next != NULL)
-			current = current->next;
-		current->next = new;
-	}
 }
 
 void	sort_args(t_ls *ls, int argc, char *argv[])
@@ -254,8 +301,8 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 		}
 		i++;
 	}
-	// merge_sort(&ls->non_dirs);
-	// merge_sort(&ls->dirs);
+	merge_sort(&ls->non_dirs);
+	merge_sort(&ls->dirs);
 }
 
 int	main(int argc, char *argv[])
@@ -283,16 +330,17 @@ int	main(int argc, char *argv[])
 		t_file *current = ls->non_dirs;
 		while (current)
 		{
-			ft_printf("%s\n", current->arg_name);
+			ft_printf("%s\n", current->name);
 			current = current->next;
 		}
+		// free_list_files(ls->non_dirs);
 		current = ls->dirs;
 		while (current != NULL)
 		{
-			open_directory(ls, current->arg_name);
+			open_directory(ls, current->name);
 			current = current->next;
-
 		}
+		// free_list_files(ls->dirs);
 	}
 	else
 	{
@@ -301,6 +349,6 @@ int	main(int argc, char *argv[])
 	
 	// print_struct_ls(ls);
 
-	// system("leaks ft_ls");
+	system("leaks ft_ls");
 	return (0);
 }
