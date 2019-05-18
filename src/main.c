@@ -72,7 +72,7 @@ void	show_files(char *directory, t_ls *ls)
 	// if (current == NULL)
 	// 	return ;
 
-	if (ls->single_arg > 1)
+	// if (ls->single_arg != 1)
 		ft_printf("%s:\n", directory);
 
 	while (current != NULL)
@@ -190,15 +190,26 @@ void	open_directory(t_ls *ls, char *dir_name)
 
 	dir = opendir(dir_name);
 	dirs = NULL;
+	if (errno == EACCES)
+	{
+		ft_printf("%s:\n", dir_name);
+		ft_printf("ft_ls: %s : %s\n", dir_name, strerror(errno));
+		errno = 0;
+		return ;
+	}
 	while ((entry = readdir(dir)) != NULL)
 		adding_file(ls, entry, &dirs);
 	current_dir = sort_and_show(ls, dir, dir_name, &dirs);
 	if (ls->flag_R == 1)
 	{
+		if (current_dir != NULL)
+			ft_printf("\n");
 		while (current_dir != NULL)
 		{
 			full_path = join_path(dir_name, current_dir->name);
 			open_directory(ls, full_path);
+			if (current_dir->next != NULL)
+				ft_printf("\n");
 			current_dir = current_dir->next;
 			ft_strdel(&full_path);
 		}
@@ -281,6 +292,8 @@ int	main(int argc, char *argv[])
 		while (current != NULL)
 		{
 			open_directory(ls, current->name);
+			if (current->next != NULL)
+				ft_printf("\n");
 			current = current->next;
 		}
 	}
