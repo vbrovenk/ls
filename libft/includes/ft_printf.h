@@ -35,6 +35,7 @@ typedef	struct	s_box
 int				g_fd;
 
 int				ft_printf(const char *format, ...);
+int				printf_help(const char *format, int i, int *ret, va_list arg);
 int				print_dec(va_list arg, t_box *info);
 int				print_unsigned(va_list arg, t_box *info);
 int				print_hex(va_list arg, t_box *info);

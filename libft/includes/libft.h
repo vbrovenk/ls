@@ -99,5 +99,6 @@ int					ft_isprime(int num);
 void				ft_lstadd_back(t_list **alst, t_list *new);
 int					ft_isinteger(char *line);
 int					ft_printf(const char *format, ...);
+int					ft_dprintf(int fd, const char *format, ...);
 
 #endif

@@ -28,7 +28,7 @@ static void	output_char(int c, t_box *info, char *string)
 		}
 	}
 	else
-		ft_putstr(string);
+		ft_putstr_fd(string, g_fd);
 }
 
 static char	*help_print(t_box *info, int c, char *string)
@@ -60,7 +60,7 @@ static int	output_uni(t_box *info, unsigned int c, int ret)
 			ret += write(g_fd, "0", 1);
 	if (info->minus == 1)
 	{
-		ft_putchar(c);
+		ft_putchar_fd(c, g_fd);
 		while (info->start-- > 0)
 			ret += write(g_fd, " ", 1);
 	}

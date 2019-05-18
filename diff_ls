@@ -1,3 +1,4 @@
+.:
 Makefile
 check_ls.sh
 diff_ls
@@ -20,6 +21,8 @@ ft_bzero.c
 ft_bzero.o
 ft_countdigits.c
 ft_countdigits.o
+ft_dprintf.c
+ft_dprintf.o
 ft_isalnum.c
 ft_isalnum.o
 ft_isalpha.c
@@ -190,16 +193,24 @@ sorting.c
 
 ./test:
 Mood
+diff_ls
+diff_my
 file.txt
 file2.c
 file3.txt
-nested_dir
 noroot
 noroot.txt
 
-./test/nested_dir:
-A
-B
-C
-
 ./test/noroot:
+
+test:
+Mood
+diff_ls
+diff_my
+file.txt
+file2.c
+file3.txt
+noroot
+noroot.txt
+
+test/noroot:

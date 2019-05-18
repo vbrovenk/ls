@@ -14,8 +14,7 @@
 
 void	ft_error(char *message)
 {
-	g_fd = 2;
-	ft_printf("%s : %s\n", message, strerror(errno));
+	ft_dprintf(2, "%s : %s\n", message, strerror(errno));
 	exit(1);
 }
 
@@ -32,10 +31,12 @@ void	check_flags(char *flags, t_ls *ls)
 			ls->flag_a = 1;
 		else if (flags[i] == 'r')
 			ls->flag_r = 1;
+		else if (flags[i] == '1')  // maybe delete this
+			;
 		else
 		{
-			ft_printf("ft_ls: illegal option -- %c\n", flags[i]);
-			ft_printf("usage: ./ft_ls [-Rar] [file ...]\n");
+			ft_dprintf(2, "ft_ls: illegal option -- %c\n", flags[i]);
+			ft_dprintf(2, "usage: ./ft_ls [-Rar] [file ...]\n");
 			exit(1);
 		}
 		i++;
@@ -72,9 +73,15 @@ void	show_files(char *directory, t_ls *ls)
 	// if (current == NULL)
 	// 	return ;
 
-	// if (ls->single_arg != 1)
+	if (ls->single_arg > 1)
+	{
 		ft_printf("%s:\n", directory);
-
+	}
+	else
+	{
+		ls->single_arg = 2;
+	}
+	
 	while (current != NULL)
 	{
 		ft_printf("%s\n", current->name);
@@ -180,7 +187,7 @@ void	adding_file(t_ls *ls, struct dirent *entry, t_file **dirs)
 		add_file_to_list(ls, entry);
 }
 
-void	open_directory(t_ls *ls, char *dir_name)
+void	open_directory(t_ls *ls, char *full_name, char *dir_name)
 {
 	DIR				*dir;
 	struct dirent	*entry;
@@ -188,28 +195,25 @@ void	open_directory(t_ls *ls, char *dir_name)
 	t_file			*current_dir;
 	char			*full_path;
 
-	dir = opendir(dir_name);
+	dir = opendir(full_name);
 	dirs = NULL;
 	if (errno == EACCES)
 	{
-		ft_printf("%s:\n", dir_name);
-		ft_printf("ft_ls: %s : %s\n", dir_name, strerror(errno));
+		ft_printf("%s:\n", full_name);
+		ft_dprintf(2, "ft_ls: %s : %s\n", dir_name, strerror(errno));
 		errno = 0;
 		return ;
 	}
 	while ((entry = readdir(dir)) != NULL)
 		adding_file(ls, entry, &dirs);
-	current_dir = sort_and_show(ls, dir, dir_name, &dirs);
+	current_dir = sort_and_show(ls, dir, full_name, &dirs);
 	if (ls->flag_R == 1)
 	{
-		if (current_dir != NULL)
-			ft_printf("\n");
 		while (current_dir != NULL)
 		{
-			full_path = join_path(dir_name, current_dir->name);
-			open_directory(ls, full_path);
-			if (current_dir->next != NULL)
-				ft_printf("\n");
+			ft_printf("\n");
+			full_path = join_path(full_name, current_dir->name);
+			open_directory(ls, full_path, current_dir->name);
 			current_dir = current_dir->next;
 			ft_strdel(&full_path);
 		}
@@ -243,9 +247,12 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 		if ((dir = opendir(argv[i])) == NULL)
 		{
 			if (errno == ENOENT)
-				ft_printf("ft_ls: %s: %s\n", argv[i], strerror(errno));
+				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			else if (errno == ENOTDIR)
 				add_to_list(&ls->non_dirs, argv[i]);
+			else if (errno == EACCES)
+				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
+			errno = 0;
 		}
 		else
 		{
@@ -265,8 +272,6 @@ int	main(int argc, char *argv[])
 
 	if ((ls = (t_ls *)ft_memalloc(sizeof(t_ls))) == NULL)
 		ft_error("Can't allocate memory");
-	g_fd = 1; // for ft_printf
-	
 	i = 1;
 	while (i < argc)
 	{
@@ -291,7 +296,7 @@ int	main(int argc, char *argv[])
 		// 	ft_printf("\n");
 		while (current != NULL)
 		{
-			open_directory(ls, current->name);
+			open_directory(ls, current->name, current->name);
 			if (current->next != NULL)
 				ft_printf("\n");
 			current = current->next;
@@ -299,7 +304,7 @@ int	main(int argc, char *argv[])
 	}
 	else
 	{
-		open_directory(ls, ".");
+		open_directory(ls, ".", ".");
 	}
 	
 	// print_struct_ls(ls);

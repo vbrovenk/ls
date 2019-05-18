@@ -25,13 +25,13 @@ static int		uni_putstr(int *string, t_box *info)
 		{
 			if (temp + sizeof_sym(string[i]) <= info->precision)
 			{
-				ft_putchar(string[i]);
+				ft_putchar_fd(string[i], g_fd);
 				temp += sizeof_sym(string[i]);
 			}
 		}
 		else
 		{
-			ft_putchar(string[i]);
+			ft_putchar_fd(string[i], g_fd);
 			temp += sizeof_sym(string[i]);
 		}
 		i++;
@@ -61,13 +61,15 @@ static int		null_str(t_box *info)
 	return (ret);
 }
 
-static t_box	*calc_size(int *string, t_box *info)
+static t_box	*calc_size(int *string, t_box *info, int *ret, int *temp)
 {
 	int size;
 	int i;
 
 	i = 0;
 	size = 0;
+	*ret = 0;
+	*temp = 0;
 	while (string[i] != '\0')
 	{
 		if (info->precision != 0)
@@ -89,15 +91,13 @@ static int		out_uni_str(t_box *info, int *string, int length)
 	int temp;
 	int ret;
 
-	ret = 0;
-	temp = 0;
 	if (info->precision > 0)
 		info->start = info->width - info->precision;
 	else if (info->precision == -1)
 		info->start = info->width;
 	else
 		info->start = info->width - length;
-	info = calc_size(string, info);
+	info = calc_size(string, info, &ret, &temp);
 	if (info->minus == 1)
 	{
 		temp += uni_putstr(string, info);
@@ -107,7 +107,8 @@ static int		out_uni_str(t_box *info, int *string, int length)
 	else
 	{
 		while (info->start-- > 0)
-			info->zero ? ret += write(1, "0", 1) : (ret += write(1, " ", 1));
+			info->zero ? ret += write(g_fd, "0", 1) :
+						(ret += write(g_fd, " ", 1));
 		temp += uni_putstr(string, info);
 	}
 	return (ret + temp);

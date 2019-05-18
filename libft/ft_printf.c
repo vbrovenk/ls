@@ -91,7 +91,7 @@ static int		print_spaces(t_box *info)
 	return (ret);
 }
 
-static int		printf_help(const char *format, int i, int *ret, va_list arg)
+int				printf_help(const char *format, int i, int *ret, va_list arg)
 {
 	t_box *info;
 
@@ -124,6 +124,7 @@ int				ft_printf(const char *format, ...)
 	va_start(arg, format);
 	ret = 0;
 	i = 0;
+	g_fd = 1;
 	while (format[i])
 	{
 		if (format[i] == '%')

@@ -80,7 +80,8 @@ SRC =	ft_memset.c \
 		get_next_line.c \
 		ft_itoa_base.c \
 		ft_isinteger.c \
-		ft_printf.c
+		ft_printf.c \
+		ft_dprintf.c
 
 SRC_PRINTF =	print_dec \
 				print_unsigned \
