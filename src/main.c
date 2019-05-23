@@ -33,10 +33,12 @@ void	check_flags(char *flags, t_ls *ls)
 			ls->flag_r = 1;
 		else if (flags[i] == '1')  // maybe delete this
 			;
+		else if (flags[i] == 'l')
+			ls->flag_l = 1;
 		else
 		{
 			ft_dprintf(2, "ft_ls: illegal option -- %c\n", flags[i]);
-			ft_dprintf(2, "usage: ./ft_ls [-Rar] [file ...]\n");
+			ft_dprintf(2, "usage: ./ft_ls [-Ralr] [file ...]\n");
 			exit(1);
 		}
 		i++;
@@ -62,7 +64,29 @@ void	print_struct_ls(t_ls *ls)
 	ft_printf("=========== LS ===========\n");
 	ft_printf("ls->flag_R = %d\n", ls->flag_R);
 	ft_printf("ls->flag_a = %d\n", ls->flag_a);
+	ft_printf("ls->flag_r = %d\n", ls->flag_r);
+	ft_printf("ls->flag_l = %d\n", ls->flag_l);
 	ft_printf("ls->args_files = %d\n", ls->args_files);
+}
+
+void	show_long(t_file *current)
+{
+	if (S_ISLNK(current->info->st_mode))
+		ft_printf("l");
+	else if (S_ISDIR(current->info->st_mode))
+		ft_printf("d");
+	else
+		ft_printf("-");
+
+	ft_printf((current->info->st_mode & S_IRUSR) ? "r" : "-");
+	ft_printf((current->info->st_mode & S_IWUSR) ? "w" : "-");
+	ft_printf((current->info->st_mode & S_IXUSR) ? "x" : "-");
+	ft_printf((current->info->st_mode & S_IRGRP) ? "r" : "-");
+	ft_printf((current->info->st_mode & S_IWGRP) ? "w" : "-");
+	ft_printf((current->info->st_mode & S_IXGRP) ? "x" : "-");
+	ft_printf((current->info->st_mode & S_IROTH) ? "r" : "-");
+	ft_printf((current->info->st_mode & S_IWOTH) ? "w" : "-");
+	ft_printf((current->info->st_mode & S_IXOTH) ? "x " : "- ");
 }
 
 void	show_files(char *directory, t_ls *ls)
@@ -84,13 +108,27 @@ void	show_files(char *directory, t_ls *ls)
 	
 	while (current != NULL)
 	{
+		if (ls->flag_l == 1)
+			show_long(current);
 		ft_printf("%s\n", current->name);
 		current = current->next;
 	}
 	// ft_printf("\n");
 }
 
-void	add_file_to_list(t_ls *ls, struct dirent *entry)
+char	*join_path(char *part_path, char *current_dir)
+{
+	char *temp;
+	char *full_path;
+
+	full_path = ft_strjoin(part_path, "/");
+	temp = full_path;
+	full_path = ft_strjoin(full_path, current_dir);
+	ft_strdel(&temp);
+	return (full_path);
+}
+
+void	add_file_to_list(t_ls *ls, struct dirent *entry, char *full_name)
 {
 	t_file *new;
 	t_file *current;
@@ -98,6 +136,10 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry)
 	if ((new = (t_file *)ft_memalloc(sizeof(t_file))) == NULL)
 		ft_error("Can't allocate t_file");
 	new->name = ft_strdup(entry->d_name);
+	new->info = (struct stat*)ft_memalloc(sizeof(struct stat));
+
+	if (lstat(full_name, new->info) < 0)
+		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
 	current = ls->list_files;
 	if (ls->list_files == NULL)
 	{
@@ -110,6 +152,29 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry)
 		ls->last_file = ls->last_file->next;
 	}
 }
+
+void	add_to_list(t_file **head, char *name, char *full_name)
+{
+	t_file *current;
+	t_file *new;
+
+	current = *head;
+	new = (t_file *)ft_memalloc(sizeof(t_file));
+	new->name = ft_strdup(name);
+	new->info = (struct stat*)ft_memalloc(sizeof(struct stat));
+
+	if (lstat(full_name, new->info) < 0)
+		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
+	if (current == NULL)
+		*head = new;
+	else
+	{
+		while (current->next != NULL)
+			current = current->next;
+		current->next = new;
+	}
+}
+
 
 void	regular_sort_files(t_ls *ls)
 {
@@ -135,36 +200,6 @@ void	regular_sort_files(t_ls *ls)
 	}
 }
 
-void	add_to_list(t_file **head, char *name)
-{
-	t_file *current;
-	t_file *new;
-
-	current = *head;
-	new = (t_file *)ft_memalloc(sizeof(t_file));
-	new->name = ft_strdup(name);
-	if (current == NULL)
-		*head = new;
-	else
-	{
-		while (current->next != NULL)
-			current = current->next;
-		current->next = new;
-	}
-}
-
-char	*join_path(char *part_path, char *current_dir)
-{
-	char *temp;
-	char *full_path;
-
-	full_path = ft_strjoin(part_path, "/");
-	temp = full_path;
-	full_path = ft_strjoin(full_path, current_dir);
-	ft_strdel(&temp);
-	return (full_path);
-}
-
 t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 {
 	merge_sort(ls, &ls->list_files);
@@ -175,28 +210,34 @@ t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 	return (*dirs);
 }
 
-void	adding_file(t_ls *ls, struct dirent *entry, t_file **dirs)
+void	adding_file(t_ls *ls, struct dirent *entry, t_file **dirs, char *path_to_file)
 {
+	char *full_name;
+
+	full_name = join_path(path_to_file, entry->d_name);
 	if (entry->d_type == DT_DIR && ft_strequ(entry->d_name, ".") == 0
 								&& ft_strequ(entry->d_name, "..") == 0)
 	{
 		if (ls->flag_a == 1 || entry->d_name[0] != '.')
-			add_to_list(dirs, entry->d_name);
+			add_to_list(dirs, entry->d_name, full_name);
 	}
+	// all content add to list of current dir
 	if (ls->flag_a == 1 || entry->d_name[0] != '.')
-		add_file_to_list(ls, entry);
+		add_file_to_list(ls, entry, full_name);
+
+	ft_strdel(&full_name);
 }
 
 void	open_directory(t_ls *ls, char *full_name, char *dir_name)
 {
 	DIR				*dir;
 	struct dirent	*entry;
-	t_file			*dirs;
+	t_file			*nested_dirs;
 	t_file			*current_dir;
 	char			*full_path;
 
 	dir = opendir(full_name);
-	dirs = NULL;
+	nested_dirs = NULL;
 	if (errno == EACCES)
 	{
 		ft_printf("%s:\n", full_name);
@@ -205,8 +246,8 @@ void	open_directory(t_ls *ls, char *full_name, char *dir_name)
 		return ;
 	}
 	while ((entry = readdir(dir)) != NULL)
-		adding_file(ls, entry, &dirs);
-	current_dir = sort_and_show(ls, dir, full_name, &dirs);
+		adding_file(ls, entry, &nested_dirs, full_name);
+	current_dir = sort_and_show(ls, dir, full_name, &nested_dirs);
 	if (ls->flag_R == 1)
 	{
 		while (current_dir != NULL)
@@ -218,7 +259,7 @@ void	open_directory(t_ls *ls, char *full_name, char *dir_name)
 			ft_strdel(&full_path);
 		}
 	}
-	free_list_files(dirs);
+	free_list_files(nested_dirs);
 }
 
 
@@ -249,14 +290,14 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 			if (errno == ENOENT)
 				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			else if (errno == ENOTDIR)
-				add_to_list(&ls->non_dirs, argv[i]);
+				add_to_list(&ls->non_dirs, argv[i], argv[i]);
 			else if (errno == EACCES)
 				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			errno = 0;
 		}
 		else
 		{
-			add_to_list(&ls->dirs, argv[i]);
+			add_to_list(&ls->dirs, argv[i], argv[i]);
 			closedir(dir);
 		}
 		i++;
@@ -288,12 +329,14 @@ int	main(int argc, char *argv[])
 		t_file *current = ls->non_dirs;
 		while (current)
 		{
+			if (ls->flag_l == 1)
+				show_long(current);
 			ft_printf("%s\n", current->name);
 			current = current->next;
 		}
 		current = ls->dirs;
 		// if (current != NULL)
-		// 	ft_printf("\n");
+			// ft_printf("\n");
 		while (current != NULL)
 		{
 			open_directory(ls, current->name, current->name);

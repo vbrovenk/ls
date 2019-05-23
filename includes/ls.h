@@ -18,7 +18,7 @@
 # include "libft.h"
 # include <dirent.h>
 # include <errno.h>
-
+# include <sys/stat.h> 
 
 /*
 ** struct for save 
@@ -29,6 +29,8 @@ typedef struct s_file
 	
 	char	*name;
 	
+	struct stat *info;
+
 	struct s_file *next;
 
 }				t_file;
@@ -44,6 +46,7 @@ typedef struct s_ls
 	u_int8_t	flag_R;
 	u_int8_t	flag_a;
 	u_int8_t	flag_r;
+	u_int8_t	flag_l;
 
 	u_int8_t	args_files;
 	u_int8_t	single_arg;
