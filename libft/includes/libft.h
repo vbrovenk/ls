@@ -13,7 +13,7 @@
 #ifndef LIBFT_H
 # define LIBFT_H
 
-#include <inttypes.h>  // this for UBUNTU 
+#include <inttypes.h>  // this for UBUNTU
 
 # include <string.h>
 # include <stdlib.h>
@@ -79,6 +79,7 @@ char				*ft_strsub(char const *s, unsigned int start, size_t len);
 char				*ft_strjoin(char const *s1, char const *s2);
 char				*ft_strtrim(char const *s);
 char				**ft_strsplit(char const *s, char c);
+void				ft_split_clear(char **split_str);
 char				*ft_itoa(int n);
 void				ft_putchar(char c);
 int					ft_putstr(char const *s);
@@ -94,7 +95,7 @@ void				ft_lstdel(t_list **alst, void (*del)(void *, size_t));
 void				ft_lstadd(t_list **alst, t_list *new);
 void				ft_lstiter(t_list *lst, void (*f)(t_list *elem));
 t_list				*ft_lstmap(t_list *lst, t_list *(*f)(t_list *elem));
-int					ft_countdigits(int n);
+int					ft_countdigits(long long n);
 int					ft_isspace(char c);
 int					ft_list_size(t_list *begin_list);
 int					ft_isprime(int num);

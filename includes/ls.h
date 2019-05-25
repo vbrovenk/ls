@@ -18,7 +18,10 @@
 # include "libft.h"
 # include <dirent.h>
 # include <errno.h>
-# include <sys/stat.h> 
+# include <sys/stat.h>
+# include <pwd.h>
+# include <grp.h>
+# include <time.h>
 
 /*
 ** struct for save 
@@ -30,6 +33,8 @@ typedef struct s_file
 	char	*name;
 	
 	struct stat *info;
+	u_int32_t	length_nbr_links;
+	u_int32_t	length_nbr_size;
 
 	struct s_file *next;
 
@@ -40,6 +45,7 @@ typedef struct s_file
 /*
 ** args_files - if files pass in args of ls
 ** single_arg - if only one arg-file, don't need show name of this dir
+** max_length_link - length of max number st_link; using for output 
 */
 typedef struct s_ls
 {
@@ -50,6 +56,11 @@ typedef struct s_ls
 
 	u_int8_t	args_files;
 	u_int8_t	single_arg;
+
+	u_int64_t	total_blocks;
+
+	u_int32_t	max_length_link;
+	u_int32_t	max_length_size;
 
 	t_file		*list_files;
 	t_file		*last_file;

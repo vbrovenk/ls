@@ -1,28 +1,26 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_countdigits.c                                   :+:      :+:    :+:   */
+/*   ft_split_clear.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: vbrovenk <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/03/29 14:41:18 by vbrovenk          #+#    #+#             */
-/*   Updated: 2018/03/29 14:41:22 by vbrovenk         ###   ########.fr       */
+/*   Created: 2019/05/25 15:25:51 by vbrovenk          #+#    #+#             */
+/*   Updated: 2019/05/25 15:25:53 by vbrovenk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-int	ft_countdigits(long long n)
+#include "libft.h"
+
+void	ft_split_clear(char **split_str)
 {
-	int	i;
+	int i;
 
 	i = 0;
-	if (n == 0)
-		return (1);
-	if (n < 0)
-		i = 1;
-	while (n)
+	while (split_str[i] != NULL)
 	{
+		free(split_str[i]);
 		i++;
-		n /= 10;
 	}
-	return (i);
+	free(split_str);
 }
