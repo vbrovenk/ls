@@ -23,6 +23,8 @@
 # include <grp.h>
 # include <time.h>
 
+# define MONTH_SEC 2678400
+
 /*
 ** struct for save 
 */
@@ -31,7 +33,7 @@ typedef struct s_file
 	// struct dirent *entry;
 	
 	char	*name;
-	
+	char	*full_name;
 	struct stat *info;
 	u_int32_t	length_nbr_links;
 	u_int32_t	length_nbr_size;

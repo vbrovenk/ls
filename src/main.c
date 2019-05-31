@@ -53,6 +53,7 @@ t_file	*free_list_files(t_file *list_files)
 	{
 		free(list_files->name);
 		free(list_files->info);
+		ft_strdel(&list_files->full_name);
 		before = list_files;
 		list_files = list_files->next;
 		free(before);
@@ -95,6 +96,7 @@ void	show_user_group(t_file *current)
 	if (usr == NULL)
 	{
 		ft_dprintf(2, "getpwuid(): %s\n", strerror(errno));
+		ft_printf("%u  ", current->info->st_uid); // in man
 		errno = 0;
 	}
 	else
@@ -103,6 +105,7 @@ void	show_user_group(t_file *current)
 	if (grp == NULL)
 	{
 		ft_dprintf(2, "getgrgid(): %s\n", strerror(errno));
+		ft_printf("%u  ", current->info->st_gid); // in man
 		errno = 0;
 	}
 	else
@@ -114,17 +117,41 @@ void	print_time(t_file *current)
 	char *last_modif;
 	char **split_date;
 	char **split_time;
+	long diff;
 
 	last_modif = ctime(&current->info->st_mtimespec.tv_sec);
 	split_date = ft_strsplit(last_modif, ' ');
 	split_time = ft_strsplit(split_date[3], ':');
-
-	ft_printf("%s %s %s:%s ", split_date[1], split_date[2], split_time[0], split_time[1]);
+	diff = time(NULL) - current->info->st_mtimespec.tv_sec;
+	if (diff < -6 * MONTH_SEC || diff > 6 * MONTH_SEC)
+		ft_printf("%s %2s %5.4s ", split_date[1], split_date[2], split_date[4]);
+	else
+		ft_printf("%s %2s %s:%s ", split_date[1], split_date[2], split_time[0], split_time[1]);
 	ft_split_clear(split_date);
 	ft_split_clear(split_time);
 
 	time_t cur_time = time(NULL);
 
+}
+
+void	print_link(t_file *current)
+{
+	char *sym_link;
+	int ret;
+	
+	sym_link = (char *)ft_memalloc(256);
+	if (S_ISLNK(current->info->st_mode))
+	{
+		ret = readlink(current->full_name, sym_link, 255);
+		if (ret == -1)
+		{
+			ft_dprintf(2, "readlink error \'%s\' - %s\n", current->full_name, strerror(errno));
+			errno = 0;
+		}
+		else
+			ft_printf(" -> %s", sym_link);
+	}
+	ft_strdel(&sym_link);
 }
 
 void	show_long(t_ls *ls, t_file *current)
@@ -155,6 +182,9 @@ void	show_long(t_ls *ls, t_file *current)
 	ft_printf("%lld ", current->info->st_size);
 
 	print_time(current);
+	ft_printf("%s", current->name);
+	print_link(current);
+	ft_printf("\n");
 }
 
 void	show_files(char *directory, t_ls *ls)
@@ -162,8 +192,6 @@ void	show_files(char *directory, t_ls *ls)
 	t_file *current;
 
 	current = ls->list_files;
-	// if (current == NULL)
-	// 	return ;
 
 	if (ls->single_arg > 1)
 	{
@@ -173,15 +201,16 @@ void	show_files(char *directory, t_ls *ls)
 	{
 		ls->single_arg = 2;
 	}
-	ft_printf("total %u\n", ls->total_blocks);
+	if (ls->flag_l == 1 && current != NULL)
+		ft_printf("total %u\n", ls->total_blocks);
 	while (current != NULL)
 	{
 		if (ls->flag_l == 1)
 			show_long(ls, current);
-		ft_printf("%s\n", current->name);
+		else
+			ft_printf("%s\n", current->name);
 		current = current->next;
 	}
-	// ft_printf("\n");
 }
 
 char	*join_path(char *part_path, char *current_dir)
@@ -205,6 +234,7 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry, char *full_name)
 		ft_error("Can't allocate t_file");
 	new->name = ft_strdup(entry->d_name);
 	new->info = (struct stat*)ft_memalloc(sizeof(struct stat));
+	new->full_name = full_name;
 	if (lstat(full_name, new->info) < 0)
 		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
 	new->length_nbr_links = ft_countdigits(new->info->st_nlink);
@@ -236,6 +266,7 @@ void	add_to_list(t_ls *ls, t_file **head, char *name, char *full_name)
 	new = (t_file *)ft_memalloc(sizeof(t_file));
 	new->name = ft_strdup(name);
 	new->info = (struct stat*)ft_memalloc(sizeof(struct stat));
+	new->full_name = full_name;
 
 	if (lstat(full_name, new->info) < 0)
 		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
@@ -300,18 +331,21 @@ void	adding_file(t_ls *ls, struct dirent *entry, t_file **dirs, char *path_to_fi
 {
 	char *full_name;
 
-	full_name = join_path(path_to_file, entry->d_name);
 	if (entry->d_type == DT_DIR && ft_strequ(entry->d_name, ".") == 0
 								&& ft_strequ(entry->d_name, "..") == 0)
 	{
 		if (ls->flag_a == 1 || entry->d_name[0] != '.')
+		{
+			full_name = join_path(path_to_file, entry->d_name);
 			add_to_list(ls, dirs, entry->d_name, full_name);
+		}
 	}
 	// all content add to list of current dir
 	if (ls->flag_a == 1 || entry->d_name[0] != '.')
-		add_file_to_list(ls, entry, full_name);
-
-	ft_strdel(&full_name);
+	{
+		full_name = join_path(path_to_file, entry->d_name);
+		add_file_to_list(ls, entry, full_name);		
+	}
 }
 
 void	open_directory(t_ls *ls, char *full_name, char *dir_name)
@@ -376,14 +410,14 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 			if (errno == ENOENT)
 				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			else if (errno == ENOTDIR)
-				add_to_list(ls, &ls->non_dirs, argv[i], argv[i]);
+				add_to_list(ls, &ls->non_dirs, argv[i], ft_strdup(argv[i]));
 			else if (errno == EACCES)
 				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			errno = 0;
 		}
 		else
 		{
-			add_to_list(ls, &ls->dirs, argv[i], argv[i]);
+			add_to_list(ls, &ls->dirs, argv[i], ft_strdup(argv[i]));
 			closedir(dir);
 		}
 		i++;
