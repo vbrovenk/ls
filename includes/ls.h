@@ -23,6 +23,7 @@
 # include <grp.h>
 # include <time.h>
 
+
 # define MONTH_SEC 2678400
 
 /*
@@ -36,9 +37,10 @@ typedef struct s_file
 	char	*full_name;
 	struct stat *info;
 	u_int32_t	length_nbr_links;
+	u_int32_t	length_name;
+	u_int32_t	length_group;
 	u_int32_t	length_nbr_size;
 
-	struct s_file *previous;
 	struct s_file *next;
 
 }				t_file;
@@ -64,6 +66,8 @@ typedef struct s_ls
 	u_int64_t	total_blocks;
 
 	u_int32_t	max_length_link;
+	u_int32_t	max_length_name;
+	u_int32_t	max_length_group;
 	u_int32_t	max_length_size;
 
 	t_file		*list_files;

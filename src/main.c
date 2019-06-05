@@ -72,6 +72,8 @@ void	print_struct_ls(t_ls *ls)
 	ft_printf("ls->flag_l = %d\n", ls->flag_l);
 	ft_printf("ls->flag_t = %d\n", ls->flag_t);
 	ft_printf("ls->args_files = %d\n", ls->args_files);
+
+	ft_printf("ls->max_group = %d\n", ls->max_length_group);
 }
 
 
@@ -89,7 +91,7 @@ void	print_spaces(long long max, long long subtrahend)
 	}
 }
 
-void	show_user_group(t_file *current)
+void	show_user_group(t_ls *ls, t_file *current)
 {
 	struct passwd	*usr;
 	struct group	*grp;
@@ -103,7 +105,10 @@ void	show_user_group(t_file *current)
 		errno = 0;
 	}
 	else
+	{
 		ft_printf("%s  ", usr->pw_name);
+		print_spaces(ls->max_length_name, current->length_name);
+	}
 	grp = getgrgid(current->info->st_gid);
 	if (grp == NULL)
 	{
@@ -112,7 +117,11 @@ void	show_user_group(t_file *current)
 		errno = 0;
 	}
 	else
-		ft_printf("%s  ", grp->gr_name);
+	{
+		ft_printf("%s", grp->gr_name);
+		// ft_printf("group = %d ", ls->max_length_group - current->length_group);
+		print_spaces(ls->max_length_group, current->length_group);
+	}
 }
 
 void	print_time(t_file *current)
@@ -121,20 +130,22 @@ void	print_time(t_file *current)
 	char **split_date;
 	char **split_time;
 	long diff;
+	char *year;
 
 	last_modif = ctime(&current->info->st_mtimespec.tv_sec);
 	split_date = ft_strsplit(last_modif, ' ');
 	split_time = ft_strsplit(split_date[3], ':');
 	diff = time(NULL) - current->info->st_mtimespec.tv_sec;
 	if (diff < -6 * MONTH_SEC || diff > 6 * MONTH_SEC)
-		ft_printf("%s %2s %5.4s ", split_date[1], split_date[2], split_date[4]);
+	{
+		year = ft_strsub(split_date[4], 0, ft_strlen(split_date[4]) - 1);
+		ft_printf("%s %2s  %s ", split_date[1], split_date[2], year);
+		ft_strdel(&year);
+	}
 	else
 		ft_printf("%s %2s %s:%s ", split_date[1], split_date[2], split_time[0], split_time[1]);
 	ft_split_clear(split_date);
 	ft_split_clear(split_time);
-
-	time_t cur_time = time(NULL);
-
 }
 
 void	print_link(t_file *current)
@@ -159,19 +170,40 @@ void	print_link(t_file *current)
 
 void	show_long(t_ls *ls, t_file *current)
 {
-	if (S_ISLNK(current->info->st_mode))
-		ft_printf("l");
+	if (S_ISBLK(current->info->st_mode))
+		ft_printf("b");
+	else if (S_ISCHR(current->info->st_mode))
+		ft_printf("c");
 	else if (S_ISDIR(current->info->st_mode))
 		ft_printf("d");
+	else if (S_ISLNK(current->info->st_mode))
+		ft_printf("l");
 	else
 		ft_printf("-");
 
 	ft_printf((current->info->st_mode & S_IRUSR) ? "r" : "-");
 	ft_printf((current->info->st_mode & S_IWUSR) ? "w" : "-");
-	ft_printf((current->info->st_mode & S_IXUSR) ? "x" : "-");
+	if ((current->info->st_mode & S_IXUSR) && (current->info->st_mode & S_ISUID))
+		ft_printf("s");
+	else if (!(current->info->st_mode & S_IXUSR) && (current->info->st_mode & S_ISUID))
+		ft_printf("S");
+	else if (current->info->st_mode & S_IXUSR)
+		ft_printf("x");
+	else
+		ft_printf("-");
 	ft_printf((current->info->st_mode & S_IRGRP) ? "r" : "-");
 	ft_printf((current->info->st_mode & S_IWGRP) ? "w" : "-");
-	ft_printf((current->info->st_mode & S_IXGRP) ? "x" : "-");
+	// ft_printf((current->info->st_mode & S_IXGRP) ? "x" : "-");
+	if ((current->info->st_mode & S_IXGRP) && (current->info->st_mode & S_ISGID))
+		ft_printf("s");
+	else if (!(current->info->st_mode & S_IXGRP) && (current->info->st_mode & S_ISGID))
+		ft_printf("S");
+	else if (current->info->st_mode & S_IXGRP)
+		ft_printf("x");
+	else
+		ft_printf("-");
+
+
 	ft_printf((current->info->st_mode & S_IROTH) ? "r" : "-");
 	ft_printf((current->info->st_mode & S_IWOTH) ? "w" : "-");
 	ft_printf((current->info->st_mode & S_IXOTH) ? "x  " : "-  ");
@@ -179,10 +211,15 @@ void	show_long(t_ls *ls, t_file *current)
 	print_spaces(ls->max_length_link, current->length_nbr_links);
 	ft_printf("%u ", current->info->st_nlink);
 
-	show_user_group(current);
+	show_user_group(ls, current);
 
 	print_spaces(ls->max_length_size, current->length_nbr_size);
-	ft_printf("%lld ", current->info->st_size);
+	// if (S_ISBLK(current->info->st_mode) || S_ISCHR(current->info->st_mode))
+	// {
+	// 	ft_printf("%d, %d", (current->info->st_rdev >> 24) & 0xFF, current->info->st_rdev & 0xFFFFFF);
+	// }
+	// else
+		ft_printf("%lld ", current->info->st_size);
 
 	print_time(current);
 	ft_printf("%s", current->name);
@@ -240,12 +277,21 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry, char *full_name)
 	new->full_name = full_name;
 	if (lstat(full_name, new->info) < 0)
 		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
+
+	
 	new->length_nbr_links = ft_countdigits(new->info->st_nlink);
 	if (new->length_nbr_links > ls->max_length_link)
 		ls->max_length_link = new->length_nbr_links;
 	new->length_nbr_size = ft_countdigits(new->info->st_size);
 	if (new->length_nbr_size > ls->max_length_size)
 		ls->max_length_size = new->length_nbr_size;
+	new->length_name = ft_strlen(getpwuid(new->info->st_uid)->pw_name);
+	if (new->length_name > ls->max_length_name)
+		ls->max_length_name = new->length_name;
+	new->length_group = ft_strlen(getgrgid(new->info->st_gid)->gr_name);
+	if (new->length_group > ls->max_length_group)
+		ls->max_length_group = new->length_group;
+
 	ls->total_blocks += new->info->st_blocks;
 	current = ls->list_files;
 	if (ls->list_files == NULL)
@@ -273,13 +319,20 @@ void	add_to_list(t_ls *ls, t_file **head, char *name, char *full_name)
 
 	if (lstat(full_name, new->info) < 0)
 		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
+
 	new->length_nbr_links = ft_countdigits(new->info->st_nlink);
 	if (new->length_nbr_links > ls->max_length_link)
 		ls->max_length_link = new->length_nbr_links;
-
 	new->length_nbr_size = ft_countdigits(new->info->st_size);
 	if (new->length_nbr_size > ls->max_length_size)
 		ls->max_length_size = new->length_nbr_size;
+	new->length_name = ft_strlen(getpwuid(new->info->st_uid)->pw_name);
+	if (new->length_name > ls->max_length_name)
+		ls->max_length_name = new->length_name;
+	new->length_group = ft_strlen(getgrgid(new->info->st_gid)->gr_name);
+	if (new->length_group > ls->max_length_group)
+		ls->max_length_group = new->length_group;
+	
 	ls->total_blocks += new->info->st_blocks;
 	if (current == NULL)
 		*head = new;
@@ -324,6 +377,8 @@ t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 	show_files(dir_name, ls);
 	// ft_printf("ls->max_length_link = %d\n", ls->max_length_link);
 	ls->max_length_link = 0;
+	ls->max_length_name = 0;
+	ls->max_length_group = 0;
 	ls->max_length_size = 0;
 	ls->total_blocks = 0;
 	ls->list_files = free_list_files(ls->list_files);
@@ -404,19 +459,25 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 	int i;
 	DIR *dir;
 
+	struct stat *check_lnk;
+
 	i = ls->args_files;
 	ls->single_arg = argc - ls->args_files;
 	while (i < argc)
 	{
 		if ((dir = opendir(argv[i])) == NULL)
 		{
-			if (errno == ENOENT)
+			check_lnk = (struct stat *)ft_memalloc(sizeof(struct stat));
+			if (lstat(argv[i], check_lnk) == 0 && S_ISLNK(check_lnk->st_mode))
+				add_to_list(ls, &ls->non_dirs, argv[i], ft_strdup(argv[i]));
+			else if (errno == ENOENT)
 				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			else if (errno == ENOTDIR)
 				add_to_list(ls, &ls->non_dirs, argv[i], ft_strdup(argv[i]));
 			else if (errno == EACCES)
 				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			errno = 0;
+			free(check_lnk);
 		}
 		else
 		{
@@ -429,6 +490,8 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 	choose_sort(ls, &ls->dirs);
 }
 
+
+// 104 tests passed
 int	main(int argc, char *argv[])
 {
 	int i;
@@ -439,7 +502,7 @@ int	main(int argc, char *argv[])
 	i = 1;
 	while (i < argc)
 	{
-		if (argv[i][0] == '-' && argv[i][1] == '\0')
+		if (argv[i][0] == '-' && argv[i][1] == '\0' && ls->args_files == 0)
 			ls->args_files = i;
 		else if (argv[i][0] == '-' && ls->args_files == 0)
 			check_flags(argv[i], ls);

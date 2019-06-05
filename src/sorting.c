@@ -55,6 +55,28 @@ t_file	*merge_sorted_list(t_file *left, t_file *right)
 	return (result);
 }
 
+// t_file	*merge_reverse_list(t_file *left, t_file *right)
+// {
+// 	t_file *result;
+
+// 	result = NULL;
+// 	if (left == NULL)
+// 		return (right);
+// 	else if (right == NULL)
+// 		return (left);
+// 	if (ft_strcmp(left->name, right->name) < 0)
+// 	{
+// 		result = right;
+// 		result->next = merge_reverse_list(left, right->next);
+// 	}
+// 	else
+// 	{
+// 		result = left;
+// 		result->next = merge_reverse_list(left->next, right);
+// 	}
+// 	return (result);
+// }
+
 t_file	*merge_reverse_list(t_file *left, t_file *right)
 {
 	t_file *result;
@@ -64,7 +86,7 @@ t_file	*merge_reverse_list(t_file *left, t_file *right)
 		return (right);
 	else if (right == NULL)
 		return (left);
-	if (ft_strcmp(left->name, right->name) < 0)
+	if (1)
 	{
 		result = right;
 		result->next = merge_reverse_list(left, right->next);
@@ -114,20 +136,13 @@ void	merge_sort(t_ls *ls, t_file **list_files, t_file *(*sorting) (t_file *, t_f
 	merge_sort(ls, &right, sorting);
     
 	*list_files = sorting(left, right);
-	// if (ls->flag_t == 1)
-	// 	*list_files = merge_time_list(left, right);
-    // else if (ls->flag_r == 1)
-    //     *list_files = merge_reverse_list(left, right);
-    // else
-    //     *list_files = merge_sorted_list(left, right);
 }
 
 void	choose_sort(t_ls *ls, t_file **list_files)
 {
-	// if (ls->flag_r == 1)
-		// merge_sort(ls, list_files, merge_reverse_list);
+    merge_sort(ls, list_files, merge_sorted_list);
 	if (ls->flag_t == 1)
 		merge_sort(ls, list_files, merge_time_list);
-    else
-        merge_sort(ls, list_files, merge_sorted_list);
+	if (ls->flag_r == 1)
+		merge_sort(ls, list_files, merge_reverse_list);
 }
