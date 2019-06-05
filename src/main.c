@@ -14,7 +14,7 @@
 
 void	ft_error(char *message)
 {
-	ft_dprintf(2, "%s : %s\n", message, strerror(errno));
+	ft_dprintf(2, "%s\n", message);
 	exit(1);
 }
 
@@ -35,10 +35,12 @@ void	check_flags(char *flags, t_ls *ls)
 			;
 		else if (flags[i] == 'l')
 			ls->flag_l = 1;
+		else if (flags[i] == 't')
+			ls->flag_t = 1;
 		else
 		{
 			ft_dprintf(2, "ft_ls: illegal option -- %c\n", flags[i]);
-			ft_dprintf(2, "usage: ./ft_ls [-Ralr] [file ...]\n");
+			ft_dprintf(2, "usage: ./ft_ls [-Ralrt] [file ...]\n");
 			exit(1);
 		}
 		i++;
@@ -68,6 +70,7 @@ void	print_struct_ls(t_ls *ls)
 	ft_printf("ls->flag_a = %d\n", ls->flag_a);
 	ft_printf("ls->flag_r = %d\n", ls->flag_r);
 	ft_printf("ls->flag_l = %d\n", ls->flag_l);
+	ft_printf("ls->flag_t = %d\n", ls->flag_t);
 	ft_printf("ls->args_files = %d\n", ls->args_files);
 }
 
@@ -315,8 +318,8 @@ void	regular_sort_files(t_ls *ls)
 
 t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 {
-	merge_sort(ls, &ls->list_files);
-	merge_sort(ls, dirs);
+	choose_sort(ls, &ls->list_files);
+	choose_sort(ls, dirs);
 	closedir(dir);
 	show_files(dir_name, ls);
 	// ft_printf("ls->max_length_link = %d\n", ls->max_length_link);
@@ -422,8 +425,8 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 		}
 		i++;
 	}
-	merge_sort(ls, &ls->non_dirs);
-	merge_sort(ls, &ls->dirs);
+	choose_sort(ls, &ls->non_dirs);
+	choose_sort(ls, &ls->dirs);
 }
 
 int	main(int argc, char *argv[])
@@ -436,7 +439,9 @@ int	main(int argc, char *argv[])
 	i = 1;
 	while (i < argc)
 	{
-		if (argv[i][0] == '-' && ls->args_files == 0)
+		if (argv[i][0] == '-' && argv[i][1] == '\0')
+			ls->args_files = i;
+		else if (argv[i][0] == '-' && ls->args_files == 0)
 			check_flags(argv[i], ls);
 		else if (ls->args_files == 0)
 			ls->args_files = i;
@@ -451,12 +456,13 @@ int	main(int argc, char *argv[])
 		{
 			if (ls->flag_l == 1)
 				show_long(ls, current);
-			ft_printf("%s\n", current->name);
+			else
+				ft_printf("%s\n", current->name);
 			current = current->next;
 		}
+		if (ls->non_dirs && ls->dirs)
+			ft_printf("\n");
 		current = ls->dirs;
-		// if (current != NULL)
-			// ft_printf("\n");
 		while (current != NULL)
 		{
 			open_directory(ls, current->name, current->name);

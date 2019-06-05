@@ -77,7 +77,29 @@ t_file	*merge_reverse_list(t_file *left, t_file *right)
 	return (result);
 }
 
-void	merge_sort(t_ls *ls, t_file **list_files)
+t_file	*merge_time_list(t_file *left, t_file *right)
+{
+	t_file *result;
+
+	result = NULL;
+	if (left == NULL)
+		return (right);
+	else if (right == NULL)
+		return (left);
+	if (left->info->st_mtimespec.tv_sec < right->info->st_mtimespec.tv_sec)
+	{
+		result = right;
+		result->next = merge_time_list(left, right->next);
+	}
+	else
+	{
+		result = left;
+		result->next = merge_time_list(left->next, right);
+	}
+	return (result);
+}
+
+void	merge_sort(t_ls *ls, t_file **list_files, t_file *(*sorting) (t_file *, t_file *))
 {
 	t_file *head;
 	t_file *left;
@@ -88,11 +110,24 @@ void	merge_sort(t_ls *ls, t_file **list_files)
 		return ;
 	left_right_split(head, &left, &right);
 	// recursive sort sublists
-	merge_sort(ls, &left);
-	merge_sort(ls, &right);
+	merge_sort(ls, &left, sorting);
+	merge_sort(ls, &right, sorting);
     
-    if (ls->flag_r == 1)
-        *list_files = merge_reverse_list(left, right);
+	*list_files = sorting(left, right);
+	// if (ls->flag_t == 1)
+	// 	*list_files = merge_time_list(left, right);
+    // else if (ls->flag_r == 1)
+    //     *list_files = merge_reverse_list(left, right);
+    // else
+    //     *list_files = merge_sorted_list(left, right);
+}
+
+void	choose_sort(t_ls *ls, t_file **list_files)
+{
+	// if (ls->flag_r == 1)
+		// merge_sort(ls, list_files, merge_reverse_list);
+	if (ls->flag_t == 1)
+		merge_sort(ls, list_files, merge_time_list);
     else
-        *list_files = merge_sorted_list(left, right);
+        merge_sort(ls, list_files, merge_sorted_list);
 }

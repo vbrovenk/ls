@@ -38,6 +38,7 @@ typedef struct s_file
 	u_int32_t	length_nbr_links;
 	u_int32_t	length_nbr_size;
 
+	struct s_file *previous;
 	struct s_file *next;
 
 }				t_file;
@@ -55,6 +56,7 @@ typedef struct s_ls
 	u_int8_t	flag_a;
 	u_int8_t	flag_r;
 	u_int8_t	flag_l;
+	u_int8_t	flag_t;
 
 	u_int8_t	args_files;
 	u_int8_t	single_arg;
@@ -76,6 +78,8 @@ typedef struct s_ls
 /*
 ** sorting.c
 */
-void	merge_sort(t_ls *ls, t_file **list_files);
+// void	merge_sort(t_ls *ls, t_file **list_files);
+
+void	choose_sort(t_ls *ls, t_file **list_files);
 
 # endif
