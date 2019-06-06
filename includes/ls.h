@@ -41,6 +41,8 @@ typedef struct s_file
 	u_int32_t	length_group;
 	u_int32_t	length_nbr_size;
 
+	u_int32_t	length_major;
+
 	struct s_file *next;
 
 }				t_file;
@@ -69,6 +71,8 @@ typedef struct s_ls
 	u_int32_t	max_length_name;
 	u_int32_t	max_length_group;
 	u_int32_t	max_length_size;
+
+	u_int32_t	max_length_major;
 
 	t_file		*list_files;
 	t_file		*last_file;

@@ -118,7 +118,7 @@ void	show_user_group(t_ls *ls, t_file *current)
 	}
 	else
 	{
-		ft_printf("%s", grp->gr_name);
+		ft_printf("%s  ", grp->gr_name);
 		// ft_printf("group = %d ", ls->max_length_group - current->length_group);
 		print_spaces(ls->max_length_group, current->length_group);
 	}
@@ -212,14 +212,22 @@ void	show_long(t_ls *ls, t_file *current)
 	ft_printf("%u ", current->info->st_nlink);
 
 	show_user_group(ls, current);
-
-	print_spaces(ls->max_length_size, current->length_nbr_size);
-	// if (S_ISBLK(current->info->st_mode) || S_ISCHR(current->info->st_mode))
-	// {
-	// 	ft_printf("%d, %d", (current->info->st_rdev >> 24) & 0xFF, current->info->st_rdev & 0xFFFFFF);
-	// }
-	// else
+	if (S_ISBLK(current->info->st_mode) || S_ISCHR(current->info->st_mode))
+	{
+		print_spaces(ls->max_length_major, current->length_major);
+		ft_printf("%d, ", (current->info->st_rdev >> 24) & 0xFF);
+		if ((current->info->st_rdev & 0xFFFFFF) >= 1000)
+			ft_printf("%#010x ", current->info->st_rdev & 0xFFFFFF);
+		else
+			ft_printf("%3d ", current->info->st_rdev & 0xFFFFFF);
+	}
+	else
+	{
+		print_spaces(ls->max_length_size, current->length_nbr_size);
+		if (ls->max_length_major > 1) 
+			print_spaces(ls->max_length_major + 1, 0);
 		ft_printf("%lld ", current->info->st_size);
+	}
 
 	print_time(current);
 	ft_printf("%s", current->name);
@@ -282,15 +290,22 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry, char *full_name)
 	new->length_nbr_links = ft_countdigits(new->info->st_nlink);
 	if (new->length_nbr_links > ls->max_length_link)
 		ls->max_length_link = new->length_nbr_links;
+	
 	new->length_nbr_size = ft_countdigits(new->info->st_size);
 	if (new->length_nbr_size > ls->max_length_size)
 		ls->max_length_size = new->length_nbr_size;
+	
 	new->length_name = ft_strlen(getpwuid(new->info->st_uid)->pw_name);
 	if (new->length_name > ls->max_length_name)
 		ls->max_length_name = new->length_name;
+	
 	new->length_group = ft_strlen(getgrgid(new->info->st_gid)->gr_name);
 	if (new->length_group > ls->max_length_group)
 		ls->max_length_group = new->length_group;
+
+	new->length_major = ft_countdigits((new->info->st_rdev >> 24) & 0xFF);
+	if (new->length_major > ls->max_length_major)
+		ls->max_length_major = new->length_major;
 
 	ls->total_blocks += new->info->st_blocks;
 	current = ls->list_files;
@@ -321,18 +336,26 @@ void	add_to_list(t_ls *ls, t_file **head, char *name, char *full_name)
 		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
 
 	new->length_nbr_links = ft_countdigits(new->info->st_nlink);
+	// ft_printf("length = %d | value = %d | name = %s\n", new->length_nbr_links, new->info->st_nlink, name);
 	if (new->length_nbr_links > ls->max_length_link)
 		ls->max_length_link = new->length_nbr_links;
+
 	new->length_nbr_size = ft_countdigits(new->info->st_size);
 	if (new->length_nbr_size > ls->max_length_size)
 		ls->max_length_size = new->length_nbr_size;
+	
 	new->length_name = ft_strlen(getpwuid(new->info->st_uid)->pw_name);
 	if (new->length_name > ls->max_length_name)
 		ls->max_length_name = new->length_name;
+	
 	new->length_group = ft_strlen(getgrgid(new->info->st_gid)->gr_name);
 	if (new->length_group > ls->max_length_group)
 		ls->max_length_group = new->length_group;
 	
+	new->length_major = ft_countdigits((new->info->st_rdev >> 24) & 0xFF);
+	if (new->length_major > ls->max_length_major)
+		ls->max_length_major = new->length_major;
+
 	ls->total_blocks += new->info->st_blocks;
 	if (current == NULL)
 		*head = new;
@@ -380,6 +403,7 @@ t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 	ls->max_length_name = 0;
 	ls->max_length_group = 0;
 	ls->max_length_size = 0;
+	ls->max_length_major = 0;
 	ls->total_blocks = 0;
 	ls->list_files = free_list_files(ls->list_files);
 	return (*dirs);
@@ -482,6 +506,12 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 		else
 		{
 			add_to_list(ls, &ls->dirs, argv[i], ft_strdup(argv[i]));
+			ls->max_length_link = 0;
+			ls->max_length_name = 0;
+			ls->max_length_group = 0;
+			ls->max_length_size = 0;
+			ls->max_length_major = 0;
+			ls->total_blocks = 0;
 			closedir(dir);
 		}
 		i++;
