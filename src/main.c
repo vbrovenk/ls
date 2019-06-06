@@ -214,7 +214,7 @@ void	show_long(t_ls *ls, t_file *current)
 	show_user_group(ls, current);
 	if (S_ISBLK(current->info->st_mode) || S_ISCHR(current->info->st_mode))
 	{
-		print_spaces(ls->max_length_major, current->length_major);
+		print_spaces(ls->max_length_major + 1, current->length_major);
 		ft_printf("%d, ", (current->info->st_rdev >> 24) & 0xFF);
 		if ((current->info->st_rdev & 0xFFFFFF) >= 1000)
 			ft_printf("%#010x ", current->info->st_rdev & 0xFFFFFF);
@@ -224,8 +224,8 @@ void	show_long(t_ls *ls, t_file *current)
 	else
 	{
 		print_spaces(ls->max_length_size, current->length_nbr_size);
-		if (ls->max_length_major > 1) 
-			print_spaces(ls->max_length_major + 1, 0);
+		if (ls->max_length_major > 1)
+			print_spaces(ls->max_length_major + 1 + 4, 0);
 		ft_printf("%lld ", current->info->st_size);
 	}
 
@@ -233,24 +233,61 @@ void	show_long(t_ls *ls, t_file *current)
 	ft_printf("%s", current->name);
 	print_link(current);
 	ft_printf("\n");
+
 }
 
-void	show_files(char *directory, t_ls *ls)
+void	count_format_output(t_ls *ls, t_file *files)
 {
 	t_file *current;
 
-	current = ls->list_files;
+	current = files;
+	while (current != NULL)
+	{
+		current->length_nbr_links = ft_countdigits(current->info->st_nlink);
+		if (current->length_nbr_links > ls->max_length_link)
+			ls->max_length_link = current->length_nbr_links;
 
-	if (ls->single_arg > 1)
+		current->length_nbr_size = ft_countdigits(current->info->st_size);
+		if (current->length_nbr_size > ls->max_length_size)
+			ls->max_length_size = current->length_nbr_size;
+
+		current->length_name = ft_strlen(getpwuid(current->info->st_uid)->pw_name);
+		if (current->length_name > ls->max_length_name)
+			ls->max_length_name = current->length_name;
+
+		current->length_group = ft_strlen(getgrgid(current->info->st_gid)->gr_name);
+		if (current->length_group > ls->max_length_group)
+			ls->max_length_group = current->length_group;
+
+		current->length_major = ft_countdigits((current->info->st_rdev >> 24) & 0xFF);
+		if (current->length_major > ls->max_length_major)
+			ls->max_length_major = current->length_major;
+
+		ls->total_blocks += current->info->st_blocks;
+		current = current->next;
+	}
+}
+
+void	show_files(char *directory, t_ls *ls, t_file *files, int need_dirname)
+{
+	t_file *current;
+
+	// current = ls->list_files;
+	current = files;
+	count_format_output(ls, files);
+
+	if (ls->single_arg > 1 && need_dirname == 1)
 	{
 		ft_printf("%s:\n", directory);
 	}
-	else
+	else if (need_dirname == 1)
 	{
 		ls->single_arg = 2;
 	}
-	if (ls->flag_l == 1 && current != NULL)
+
+	if (ls->flag_l == 1 && current != NULL && need_dirname == 1)
 		ft_printf("total %u\n", ls->total_blocks);
+
 	while (current != NULL)
 	{
 		if (ls->flag_l == 1)
@@ -259,6 +296,13 @@ void	show_files(char *directory, t_ls *ls)
 			ft_printf("%s\n", current->name);
 		current = current->next;
 	}
+
+	ls->max_length_link = 0;
+	ls->max_length_name = 0;
+	ls->max_length_group = 0;
+	ls->max_length_size = 0;
+	ls->max_length_major = 0;
+	ls->total_blocks = 0;
 }
 
 char	*join_path(char *part_path, char *current_dir)
@@ -286,28 +330,6 @@ void	add_file_to_list(t_ls *ls, struct dirent *entry, char *full_name)
 	if (lstat(full_name, new->info) < 0)
 		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
 
-	
-	new->length_nbr_links = ft_countdigits(new->info->st_nlink);
-	if (new->length_nbr_links > ls->max_length_link)
-		ls->max_length_link = new->length_nbr_links;
-	
-	new->length_nbr_size = ft_countdigits(new->info->st_size);
-	if (new->length_nbr_size > ls->max_length_size)
-		ls->max_length_size = new->length_nbr_size;
-	
-	new->length_name = ft_strlen(getpwuid(new->info->st_uid)->pw_name);
-	if (new->length_name > ls->max_length_name)
-		ls->max_length_name = new->length_name;
-	
-	new->length_group = ft_strlen(getgrgid(new->info->st_gid)->gr_name);
-	if (new->length_group > ls->max_length_group)
-		ls->max_length_group = new->length_group;
-
-	new->length_major = ft_countdigits((new->info->st_rdev >> 24) & 0xFF);
-	if (new->length_major > ls->max_length_major)
-		ls->max_length_major = new->length_major;
-
-	ls->total_blocks += new->info->st_blocks;
 	current = ls->list_files;
 	if (ls->list_files == NULL)
 	{
@@ -335,28 +357,6 @@ void	add_to_list(t_ls *ls, t_file **head, char *name, char *full_name)
 	if (lstat(full_name, new->info) < 0)
 		ft_dprintf(2, "lstat error \'%s\' - %s\n", full_name, strerror(errno));
 
-	new->length_nbr_links = ft_countdigits(new->info->st_nlink);
-	// ft_printf("length = %d | value = %d | name = %s\n", new->length_nbr_links, new->info->st_nlink, name);
-	if (new->length_nbr_links > ls->max_length_link)
-		ls->max_length_link = new->length_nbr_links;
-
-	new->length_nbr_size = ft_countdigits(new->info->st_size);
-	if (new->length_nbr_size > ls->max_length_size)
-		ls->max_length_size = new->length_nbr_size;
-	
-	new->length_name = ft_strlen(getpwuid(new->info->st_uid)->pw_name);
-	if (new->length_name > ls->max_length_name)
-		ls->max_length_name = new->length_name;
-	
-	new->length_group = ft_strlen(getgrgid(new->info->st_gid)->gr_name);
-	if (new->length_group > ls->max_length_group)
-		ls->max_length_group = new->length_group;
-	
-	new->length_major = ft_countdigits((new->info->st_rdev >> 24) & 0xFF);
-	if (new->length_major > ls->max_length_major)
-		ls->max_length_major = new->length_major;
-
-	ls->total_blocks += new->info->st_blocks;
 	if (current == NULL)
 		*head = new;
 	else
@@ -368,7 +368,7 @@ void	add_to_list(t_ls *ls, t_file **head, char *name, char *full_name)
 }
 
 
-void	regular_sort_files(t_ls *ls)
+void	regular_sort_files(t_ls *ls) // not used
 {
 	t_file *current_file;
 	t_file *after_file;
@@ -397,14 +397,7 @@ t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 	choose_sort(ls, &ls->list_files);
 	choose_sort(ls, dirs);
 	closedir(dir);
-	show_files(dir_name, ls);
-	// ft_printf("ls->max_length_link = %d\n", ls->max_length_link);
-	ls->max_length_link = 0;
-	ls->max_length_name = 0;
-	ls->max_length_group = 0;
-	ls->max_length_size = 0;
-	ls->max_length_major = 0;
-	ls->total_blocks = 0;
+	show_files(dir_name, ls, ls->list_files, 1);
 	ls->list_files = free_list_files(ls->list_files);
 	return (*dirs);
 }
@@ -465,7 +458,7 @@ void	open_directory(t_ls *ls, char *full_name, char *dir_name)
 }
 
 
-void	print_args(t_ls *ls, int argc, char *argv[]) // not use
+void	print_args(t_ls *ls, int argc, char *argv[]) // not used
 {
 	int i;
 
@@ -506,12 +499,6 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 		else
 		{
 			add_to_list(ls, &ls->dirs, argv[i], ft_strdup(argv[i]));
-			ls->max_length_link = 0;
-			ls->max_length_name = 0;
-			ls->max_length_group = 0;
-			ls->max_length_size = 0;
-			ls->max_length_major = 0;
-			ls->total_blocks = 0;
 			closedir(dir);
 		}
 		i++;
@@ -545,14 +532,9 @@ int	main(int argc, char *argv[])
 		sort_args(ls, argc, argv);
 		i = ls->args_files;
 		t_file *current = ls->non_dirs;
-		while (current)
-		{
-			if (ls->flag_l == 1)
-				show_long(ls, current);
-			else
-				ft_printf("%s\n", current->name);
-			current = current->next;
-		}
+
+		show_files(NULL, ls, ls->non_dirs, 0);
+
 		if (ls->non_dirs && ls->dirs)
 			ft_printf("\n");
 		current = ls->dirs;
