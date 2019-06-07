@@ -19,7 +19,12 @@ LIBFT_INC = ./libft/includes/
 LIBFT = ./libft/libft.a
 
 SRC =	main.c \
-		sorting.c
+		sorting.c \
+		show_files.c \
+		show_long.c \
+		open_directory.c \
+		work_with_list.c \
+		choose_sort.c
 
 OBJ = $(addprefix obj/, $(SRC:.c=.o))
 
@@ -38,7 +43,7 @@ $(NAME): libft/libft.a obj $(OBJ)
 	@echo "$(PURPLEBOLD)ft_ls $(PURPLE)is ready$(OFF)"
 
 obj/%.o: src/%.c $(INCLUDE)
-	@gcc -c $< -o $@ -I $(LIBFT_INC) -I $(INCLUDE_DIR)
+	@gcc $(CFLAGS) -c $< -o $@ -I $(LIBFT_INC) -I $(INCLUDE_DIR)
 	@echo "$(PURPLELIGHT)Compiling $(WHITE)$< $(PURPLELIGHT)done$(OFF)"
 
 libft/libft.a:

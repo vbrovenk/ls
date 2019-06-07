@@ -12,10 +12,10 @@
 
 #include "ls.h"
 
-void	left_right_split(t_file *source, t_file **left, t_file **right)
+static	void	left_right_split(t_file *source, t_file **left, t_file **right)
 {
-	t_file *end;
-	t_file *middle;
+	t_file	*end;
+	t_file	*middle;
 
 	middle = source;
 	end = source->next;
@@ -33,7 +33,7 @@ void	left_right_split(t_file *source, t_file **left, t_file **right)
 	middle->next = NULL;
 }
 
-t_file	*merge_sorted_list(t_file *left, t_file *right)
+t_file			*merge_sorted_list(t_file *left, t_file *right)
 {
 	t_file *result;
 
@@ -55,29 +55,7 @@ t_file	*merge_sorted_list(t_file *left, t_file *right)
 	return (result);
 }
 
-// t_file	*merge_reverse_list(t_file *left, t_file *right)
-// {
-// 	t_file *result;
-
-// 	result = NULL;
-// 	if (left == NULL)
-// 		return (right);
-// 	else if (right == NULL)
-// 		return (left);
-// 	if (ft_strcmp(left->name, right->name) < 0)
-// 	{
-// 		result = right;
-// 		result->next = merge_reverse_list(left, right->next);
-// 	}
-// 	else
-// 	{
-// 		result = left;
-// 		result->next = merge_reverse_list(left->next, right);
-// 	}
-// 	return (result);
-// }
-
-t_file	*merge_reverse_list(t_file *left, t_file *right)
+t_file			*merge_reverse_list(t_file *left, t_file *right)
 {
 	t_file *result;
 
@@ -99,7 +77,7 @@ t_file	*merge_reverse_list(t_file *left, t_file *right)
 	return (result);
 }
 
-t_file	*merge_time_list(t_file *left, t_file *right)
+t_file			*merge_time_list(t_file *left, t_file *right)
 {
 	t_file *result;
 
@@ -121,7 +99,8 @@ t_file	*merge_time_list(t_file *left, t_file *right)
 	return (result);
 }
 
-void	merge_sort(t_ls *ls, t_file **list_files, t_file *(*sorting) (t_file *, t_file *))
+void			merge_sort(t_ls *ls, t_file **list_files,
+							t_file *(*sorting) (t_file *, t_file *))
 {
 	t_file *head;
 	t_file *left;
@@ -131,18 +110,7 @@ void	merge_sort(t_ls *ls, t_file **list_files, t_file *(*sorting) (t_file *, t_f
 	if (head == NULL || head->next == NULL)
 		return ;
 	left_right_split(head, &left, &right);
-	// recursive sort sublists
 	merge_sort(ls, &left, sorting);
 	merge_sort(ls, &right, sorting);
-    
 	*list_files = sorting(left, right);
-}
-
-void	choose_sort(t_ls *ls, t_file **list_files)
-{
-    merge_sort(ls, list_files, merge_sorted_list);
-	if (ls->flag_t == 1)
-		merge_sort(ls, list_files, merge_time_list);
-	if (ls->flag_r == 1)
-		merge_sort(ls, list_files, merge_reverse_list);
 }
