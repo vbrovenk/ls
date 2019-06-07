@@ -83,7 +83,6 @@ void	print_spaces(long long max, long long subtrahend)
 	int i;
 
 	i = max - subtrahend;
-	// ft_printf("i = %d\n", i);
 	while (i)
 	{
 		ft_printf(" ");
@@ -119,7 +118,6 @@ void	show_user_group(t_ls *ls, t_file *current)
 	else
 	{
 		ft_printf("%s  ", grp->gr_name);
-		// ft_printf("group = %d ", ls->max_length_group - current->length_group);
 		print_spaces(ls->max_length_group, current->length_group);
 	}
 }
@@ -178,6 +176,10 @@ void	show_long(t_ls *ls, t_file *current)
 		ft_printf("d");
 	else if (S_ISLNK(current->info->st_mode))
 		ft_printf("l");
+	else if (S_ISSOCK(current->info->st_mode))
+		ft_printf("s");
+	else if (S_ISFIFO(current->info->st_mode))
+		ft_printf("p");
 	else
 		ft_printf("-");
 
@@ -193,7 +195,6 @@ void	show_long(t_ls *ls, t_file *current)
 		ft_printf("-");
 	ft_printf((current->info->st_mode & S_IRGRP) ? "r" : "-");
 	ft_printf((current->info->st_mode & S_IWGRP) ? "w" : "-");
-	// ft_printf((current->info->st_mode & S_IXGRP) ? "x" : "-");
 	if ((current->info->st_mode & S_IXGRP) && (current->info->st_mode & S_ISGID))
 		ft_printf("s");
 	else if (!(current->info->st_mode & S_IXGRP) && (current->info->st_mode & S_ISGID))
@@ -206,7 +207,18 @@ void	show_long(t_ls *ls, t_file *current)
 
 	ft_printf((current->info->st_mode & S_IROTH) ? "r" : "-");
 	ft_printf((current->info->st_mode & S_IWOTH) ? "w" : "-");
-	ft_printf((current->info->st_mode & S_IXOTH) ? "x  " : "-  ");
+	// ft_printf((current->info->st_mode & S_IXOTH) ? "x  " : "-  ");
+	if ((current->info->st_mode & S_IXOTH) && (current->info->st_mode & S_ISVTX))
+		ft_printf("t  ");
+	else if ((current->info->st_mode & S_ISVTX) && !(current->info->st_mode & S_IXOTH))
+		ft_printf("T  ");
+	else if (current->info->st_mode & S_IXOTH)
+		ft_printf("x  ");
+	else
+		ft_printf("-  ");
+
+
+
 
 	print_spaces(ls->max_length_link, current->length_nbr_links);
 	ft_printf("%u ", current->info->st_nlink);
@@ -272,18 +284,13 @@ void	show_files(char *directory, t_ls *ls, t_file *files, int need_dirname)
 {
 	t_file *current;
 
-	// current = ls->list_files;
 	current = files;
 	count_format_output(ls, files);
 
 	if (ls->single_arg > 1 && need_dirname == 1)
-	{
 		ft_printf("%s:\n", directory);
-	}
 	else if (need_dirname == 1)
-	{
 		ls->single_arg = 2;
-	}
 
 	if (ls->flag_l == 1 && current != NULL && need_dirname == 1)
 		ft_printf("total %u\n", ls->total_blocks);
@@ -367,31 +374,6 @@ void	add_to_list(t_ls *ls, t_file **head, char *name, char *full_name)
 	}
 }
 
-
-void	regular_sort_files(t_ls *ls) // not used
-{
-	t_file *current_file;
-	t_file *after_file;
-	char	*temp;
-
-	current_file = ls->list_files;
-	while (current_file->next != NULL)
-	{
-		after_file = current_file->next;
-		while (after_file != NULL)
-		{
-			if (ft_strcmp(current_file->name, after_file->name) > 0)
-			{
-				temp = current_file->name;
-				current_file->name = after_file->name;
-				after_file->name = temp;
-			}
-			after_file = after_file->next;
-		}
-		current_file = current_file->next;
-	}
-}
-
 t_file	*sort_and_show(t_ls *ls, DIR *dir, char *dir_name, t_file **dirs)
 {
 	choose_sort(ls, &ls->list_files);
@@ -457,20 +439,6 @@ void	open_directory(t_ls *ls, char *full_name, char *dir_name)
 	free_list_files(nested_dirs);
 }
 
-
-void	print_args(t_ls *ls, int argc, char *argv[]) // not used
-{
-	int i;
-
-	i = ls->args_files;
-	while (i < argc)
-	{
-		ft_printf("%s ", argv[i]);
-		i++;
-	}
-	ft_printf("\n");
-}
-
 void	sort_args(t_ls *ls, int argc, char *argv[])
 {
 	int i;
@@ -482,9 +450,11 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 	ls->single_arg = argc - ls->args_files;
 	while (i < argc)
 	{
-		if ((dir = opendir(argv[i])) == NULL)
+		check_lnk = (struct stat *)ft_memalloc(sizeof(struct stat));
+		if (ls->flag_l == 1 && lstat(argv[i], check_lnk) == 0 && S_ISLNK(check_lnk->st_mode))
+			add_to_list(ls, &ls->non_dirs, argv[i], ft_strdup(argv[i]));
+		else if ((dir = opendir(argv[i])) == NULL)
 		{
-			check_lnk = (struct stat *)ft_memalloc(sizeof(struct stat));
 			if (lstat(argv[i], check_lnk) == 0 && S_ISLNK(check_lnk->st_mode))
 				add_to_list(ls, &ls->non_dirs, argv[i], ft_strdup(argv[i]));
 			else if (errno == ENOENT)
@@ -494,13 +464,13 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 			else if (errno == EACCES)
 				ft_dprintf(2, "ft_ls: %s: %s\n", argv[i], strerror(errno));
 			errno = 0;
-			free(check_lnk);
 		}
 		else
 		{
 			add_to_list(ls, &ls->dirs, argv[i], ft_strdup(argv[i]));
 			closedir(dir);
 		}
+		free(check_lnk);
 		i++;
 	}
 	choose_sort(ls, &ls->non_dirs);
@@ -508,7 +478,7 @@ void	sort_args(t_ls *ls, int argc, char *argv[])
 }
 
 
-// 104 tests passed
+// 120 tests passed
 int	main(int argc, char *argv[])
 {
 	int i;
@@ -547,9 +517,7 @@ int	main(int argc, char *argv[])
 		}
 	}
 	else
-	{
 		open_directory(ls, ".", ".");
-	}
 	
 	// print_struct_ls(ls);
 
